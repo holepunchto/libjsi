@@ -153,7 +153,7 @@ struct JSIRuntime : jsi::Runtime {
 
   bool
   drainMicrotasks (int maxMicrotasksHint = -1) override {
-    return true; // TODO
+    std::abort(); // TODO
   }
 
   jsi::Object
@@ -285,12 +285,12 @@ protected:
 
   bool
   bigintIsInt64 (const jsi::BigInt &bigint) override {
-    return false; // TODO
+    std::abort(); // TODO
   }
 
   bool
   bigintIsUint64 (const jsi::BigInt &bigint) override {
-    return false; // TODO
+    std::abort(); // TODO
   }
 
   uint64_t
@@ -306,7 +306,7 @@ protected:
 
   jsi::String
   bigintToString (const jsi::BigInt &, int) override {
-    return make<jsi::String>(nullptr); // TODO
+    std::abort(); // TODO
   }
 
   jsi::String
@@ -338,7 +338,7 @@ protected:
 
   jsi::Value
   createValueFromJsonUtf8 (const uint8_t *json, size_t length) override {
-    return jsi::Value::null(); // TODO
+    std::abort(); // TODO
   }
 
   jsi::Object
@@ -353,22 +353,18 @@ protected:
   }
 
   jsi::Object
-  createObject (std::shared_ptr<jsi::HostObject> ho) override {
-    return make<jsi::Object>(nullptr); // TODO
+  createObject (std::shared_ptr<jsi::HostObject> object) override {
+    std::abort(); // TODO
   }
 
   std::shared_ptr<jsi::HostObject>
   getHostObject (const jsi::Object &object) override {
-    return nullptr; // TODO
+    std::abort(); // TODO
   }
-
-  jsi::HostFunctionType hostFunction = [] (jsi::Runtime &rt, const jsi::Value &receiver, const jsi::Value *args, size_t count) -> jsi::Value {
-    return jsi::Value::undefined();
-  };
 
   jsi::HostFunctionType &
   getHostFunction (const jsi::Function &fn) override {
-    return hostFunction; // TODO
+    std::abort(); // TODO
   }
 
   bool
@@ -500,12 +496,12 @@ protected:
 
   bool
   isHostObject (const jsi::Object &object) const override {
-    return false; // TODO
+    std::abort(); // TODO
   }
 
   bool
   isHostFunction (const jsi::Function &object) const override {
-    return false; // TODO
+    std::abort(); // TODO
   }
 
   jsi::Array
@@ -547,7 +543,7 @@ protected:
     auto ref = new JSIArrayBufferReference(std::move(buffer));
 
     js_value_t *value;
-    err = js_create_external_arraybuffer(env, ref->data(), ref->size(), on_js_finalize<JSIArrayBufferReference>, ref, &value);
+    err = js_create_external_arraybuffer(env, ref->buffer->data(), ref->buffer->size(), on_js_finalize<JSIArrayBufferReference>, ref, &value);
     assert(err == 0);
 
     return make<jsi::ArrayBuffer>(new JSIReferenceValue(env, value));
@@ -606,8 +602,18 @@ protected:
   }
 
   jsi::Function
-  createFunctionFromHostFunction (const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType fn) override {
-    return make<jsi::Function>(nullptr); // TODO
+  createFunctionFromHostFunction (const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType function) override {
+    int err;
+
+    auto ref = new JSIHostFunctionReference(this, function);
+
+    auto str = as<JSIReferenceValue>(name)->toString();
+
+    js_value_t *value;
+    err = js_create_function(env, str.data(), str.length(), JSIHostFunctionReference::call, ref, &value);
+    assert(err == 0);
+
+    return make<jsi::Function>(new JSIReferenceValue(env, value));
   }
 
   jsi::Value
@@ -827,6 +833,8 @@ private:
     JSIPreparedJavaScript(std::shared_ptr<const jsi::Buffer> buffer, std::string file)
         : buffer(buffer),
           file(file) {}
+
+    JSIPreparedJavaScript(const JSIPreparedJavaScript &) = delete;
   };
 
   struct JSIReferenceValue : PointerValue {
@@ -849,6 +857,8 @@ private:
       err = js_reference_ref(env, ref, nullptr);
       assert(err == 0);
     }
+
+    JSIReferenceValue(const JSIReferenceValue &) = delete;
 
     ~JSIReferenceValue() override {
       int err;
@@ -913,6 +923,8 @@ private:
       assert(err == 0);
     }
 
+    JSIWeakReferenceValue(const JSIWeakReferenceValue &) = delete;
+
     ~JSIWeakReferenceValue() override {
       int err;
 
@@ -944,15 +956,7 @@ private:
     JSIArrayBufferReference(std::shared_ptr<jsi::MutableBuffer> &&buffer)
         : buffer(std::move(buffer)) {}
 
-    size_t
-    size () const {
-      return buffer->size();
-    }
-
-    uint8_t *
-    data () {
-      return buffer->data();
-    }
+    JSIArrayBufferReference(const JSIArrayBufferReference &) = delete;
   };
 
   struct JSINativeStateReference {
@@ -960,5 +964,58 @@ private:
 
     JSINativeStateReference(std::shared_ptr<jsi::NativeState> &&state)
         : state(std::move(state)) {}
+
+    JSINativeStateReference(const JSINativeStateReference &) = delete;
+  };
+
+  struct JSIHostObjectReference {
+    std::shared_ptr<jsi::HostObject> object;
+
+    JSIHostObjectReference(std::shared_ptr<jsi::HostObject> &&object)
+        : object(std::move(object)) {}
+
+    JSIHostObjectReference(const JSIHostObjectReference &) = delete;
+  };
+
+  struct JSIHostFunctionReference {
+    JSIRuntime *runtime;
+    jsi::HostFunctionType function;
+
+    JSIHostFunctionReference(JSIRuntime *runtime, jsi::HostFunctionType function)
+        : runtime(runtime),
+          function(function) {}
+
+    JSIHostFunctionReference(const JSIHostFunctionReference &) = delete;
+
+    static js_value_t *
+    call (js_env_t *env, js_callback_info_t *info) {
+      int err;
+
+      JSIHostFunctionReference *ref;
+
+      size_t argc;
+      err = js_get_callback_info(env, info, &argc, nullptr, nullptr, nullptr);
+      assert(err == 0);
+
+      std::vector<js_value_t *> argv;
+
+      argv.reserve(argc);
+
+      js_value_t *receiver;
+      err = js_get_callback_info(env, info, &argc, argv.data(), &receiver, reinterpret_cast<void **>(&ref));
+      assert(err == 0);
+
+      std::vector<jsi::Value> args;
+
+      args.reserve(argc);
+
+      for (size_t i = 0; i < argc; i++) {
+        args.push_back(ref->runtime->as(argv[i]));
+      }
+
+      auto value = ref->function(*ref->runtime, ref->runtime->as(receiver), args.data(), argc);
+
+      return ref->runtime->as(value);
+    }
   };
 };
