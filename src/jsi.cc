@@ -1,3 +1,5 @@
+#include <vector>
+
 #include <assert.h>
 #include <js.h>
 #include <utf.h>
@@ -154,7 +156,7 @@ struct JSIRuntime : jsi::Runtime {
 
   bool
   drainMicrotasks (int maxMicrotasksHint = -1) override {
-    return true;
+    return true; // TODO
   }
 
   jsi::Object
@@ -286,22 +288,28 @@ protected:
 
   bool
   bigintIsInt64 (const jsi::BigInt &bigint) override {
-    return false;
+    return false; // TODO
   }
 
   bool
   bigintIsUint64 (const jsi::BigInt &bigint) override {
-    return false;
+    return false; // TODO
   }
 
   uint64_t
   truncate (const jsi::BigInt &bigint) override {
-    return 0;
+    int err;
+
+    uint64_t value;
+    err = js_get_value_bigint_uint64(env, as(bigint), &value, nullptr);
+    assert(err == 0);
+
+    return value;
   }
 
   jsi::String
   bigintToString (const jsi::BigInt &, int) override {
-    return make<jsi::String>(nullptr);
+    return make<jsi::String>(nullptr); // TODO
   }
 
   jsi::String
@@ -333,7 +341,7 @@ protected:
 
   jsi::Value
   createValueFromJsonUtf8 (const uint8_t *json, size_t length) override {
-    return jsi::Value::null();
+    return jsi::Value::null(); // TODO
   }
 
   jsi::Object
@@ -349,12 +357,12 @@ protected:
 
   jsi::Object
   createObject (std::shared_ptr<jsi::HostObject> ho) override {
-    return make<jsi::Object>(nullptr);
+    return make<jsi::Object>(nullptr); // TODO
   }
 
   std::shared_ptr<jsi::HostObject>
   getHostObject (const jsi::Object &object) override {
-    return nullptr;
+    return nullptr; // TODO
   }
 
   jsi::HostFunctionType hostFunction = [] (jsi::Runtime &rt, const jsi::Value &receiver, const jsi::Value *args, size_t count) -> jsi::Value {
@@ -363,7 +371,7 @@ protected:
 
   jsi::HostFunctionType &
   getHostFunction (const jsi::Function &fn) override {
-    return hostFunction;
+    return hostFunction; // TODO
   }
 
   bool
@@ -371,7 +379,7 @@ protected:
     int err;
 
     bool result;
-    err = js_is_wrapped(env, as<JSIReferenceValue>(object)->value(), &result);
+    err = js_is_wrapped(env, as(object), &result);
     assert(err == 0);
 
     return result;
@@ -382,7 +390,7 @@ protected:
     int err;
 
     JSINativeStateReference *ref;
-    err = js_unwrap(env, as<JSIReferenceValue>(object)->value(), reinterpret_cast<void **>(&ref));
+    err = js_unwrap(env, as(object), reinterpret_cast<void **>(&ref));
     assert(err == 0);
 
     return ref->state;
@@ -394,7 +402,7 @@ protected:
 
     auto ref = new JSINativeStateReference(std::move(state));
 
-    err = js_wrap(env, as<JSIReferenceValue>(object)->value(), ref, on_js_finalize<JSINativeStateReference>, ref, nullptr);
+    err = js_wrap(env, as(object), ref, on_js_finalize<JSINativeStateReference>, ref, nullptr);
     assert(err == 0);
   }
 
@@ -403,7 +411,7 @@ protected:
     int err;
 
     js_value_t *value;
-    err = js_get_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &value);
+    err = js_get_property(env, as(object), as(key), &value);
     assert(err == 0);
 
     return as(value);
@@ -414,7 +422,7 @@ protected:
     int err;
 
     js_value_t *value;
-    err = js_get_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &value);
+    err = js_get_property(env, as(object), as(key), &value);
     assert(err == 0);
 
     return as(value);
@@ -425,7 +433,7 @@ protected:
     int err;
 
     bool result;
-    err = js_has_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &result);
+    err = js_has_property(env, as(object), as(key), &result);
     assert(err == 0);
 
     return result;
@@ -436,7 +444,7 @@ protected:
     int err;
 
     bool result;
-    err = js_has_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &result);
+    err = js_has_property(env, as(object), as(key), &result);
     assert(err == 0);
 
     return result;
@@ -447,7 +455,7 @@ protected:
     int err;
 
     bool result;
-    err = js_set_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), as(value));
+    err = js_set_property(env, as(object), as(key), as(value));
     assert(err == 0);
   }
 
@@ -456,7 +464,7 @@ protected:
     int err;
 
     bool result;
-    err = js_set_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), as(value));
+    err = js_set_property(env, as(object), as(key), as(value));
     assert(err == 0);
   }
 
@@ -465,7 +473,7 @@ protected:
     int err;
 
     bool result;
-    err = js_is_array(env, as<JSIReferenceValue>(object)->value(), &result);
+    err = js_is_array(env, as(object), &result);
     assert(err == 0);
 
     return result;
@@ -476,7 +484,7 @@ protected:
     int err;
 
     bool result;
-    err = js_is_arraybuffer(env, as<JSIReferenceValue>(object)->value(), &result);
+    err = js_is_arraybuffer(env, as(object), &result);
     assert(err == 0);
 
     return result;
@@ -487,7 +495,7 @@ protected:
     int err;
 
     bool result;
-    err = js_is_function(env, as<JSIReferenceValue>(object)->value(), &result);
+    err = js_is_function(env, as(object), &result);
     assert(err == 0);
 
     return result;
@@ -495,12 +503,12 @@ protected:
 
   bool
   isHostObject (const jsi::Object &object) const override {
-    return false;
+    return false; // TODO
   }
 
   bool
   isHostFunction (const jsi::Function &object) const override {
-    return false;
+    return false; // TODO
   }
 
   jsi::Array
@@ -508,7 +516,7 @@ protected:
     int err;
 
     js_value_t *value;
-    err = js_get_property_names(env, as<JSIReferenceValue>(object)->value(), &value);
+    err = js_get_property_names(env, as(object), &value);
     assert(err == 0);
 
     return make<jsi::Array>(new JSIReferenceValue(env, value));
@@ -516,12 +524,12 @@ protected:
 
   jsi::WeakObject
   createWeakObject (const jsi::Object &object) override {
-    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, as<JSIReferenceValue>(object)->value()));
+    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, as(object)));
   }
 
   jsi::Value
   lockWeakObject (const jsi::WeakObject &object) override {
-    return make<jsi::Object>(new JSIReferenceValue(env, as<JSIWeakReferenceValue>(object)->value()));
+    return make<jsi::Object>(new JSIReferenceValue(env, as(object)));
   }
 
   jsi::Array
@@ -553,7 +561,7 @@ protected:
     int err;
 
     uint32_t len;
-    err = js_get_array_length(env, as<JSIReferenceValue>(array)->value(), &len);
+    err = js_get_array_length(env, as(array), &len);
     assert(err == 0);
 
     return len;
@@ -564,7 +572,7 @@ protected:
     int err;
 
     size_t len;
-    err = js_get_arraybuffer_info(env, as<JSIReferenceValue>(arraybuffer)->value(), nullptr, &len);
+    err = js_get_arraybuffer_info(env, as(arraybuffer), nullptr, &len);
     assert(err == 0);
 
     return len;
@@ -575,7 +583,7 @@ protected:
     int err;
 
     uint8_t *data;
-    err = js_get_arraybuffer_info(env, as<JSIReferenceValue>(arraybuffer)->value(), reinterpret_cast<void **>(data), nullptr);
+    err = js_get_arraybuffer_info(env, as(arraybuffer), reinterpret_cast<void **>(data), nullptr);
     assert(err == 0);
 
     return data;
@@ -586,7 +594,7 @@ protected:
     int err;
 
     js_value_t *value;
-    err = js_get_element(env, as<JSIReferenceValue>(array)->value(), i, &value);
+    err = js_get_element(env, as(array), i, &value);
     assert(err == 0);
 
     return as(value);
@@ -596,23 +604,51 @@ protected:
   setValueAtIndexImpl (const jsi::Array &array, size_t i, const jsi::Value &value) override {
     int err;
 
-    err = js_set_element(env, as<JSIReferenceValue>(array)->value(), i, as(value));
+    err = js_set_element(env, as(array), i, as(value));
     assert(err == 0);
   }
 
   jsi::Function
   createFunctionFromHostFunction (const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType fn) override {
-    return make<jsi::Function>(nullptr);
+    return make<jsi::Function>(nullptr); // TODO
   }
 
   jsi::Value
-  call (const jsi::Function &fn, const jsi::Value &receiver, const jsi::Value *args, size_t count) override {
-    return jsi::Value::undefined();
+  call (const jsi::Function &function, const jsi::Value &receiver, const jsi::Value *args, size_t count) override {
+    int err;
+
+    std::vector<js_value_t *> argv;
+
+    argv.reserve(count);
+
+    for (size_t i = 0; i < count; i++) {
+      argv.push_back(as(args[i]));
+    }
+
+    js_value_t *result;
+    err = js_call_function(env, as(receiver), as(function), count, argv.data(), &result);
+    assert(err == 0);
+
+    return as(result);
   }
 
   jsi::Value
   callAsConstructor (const jsi::Function &constructor, const jsi::Value *args, size_t count) override {
-    return jsi::Value::undefined();
+    int err;
+
+    std::vector<js_value_t *> argv;
+
+    argv.reserve(count);
+
+    for (size_t i = 0; i < count; i++) {
+      argv.push_back(as(args[i]));
+    }
+
+    js_value_t *result;
+    err = js_new_instance(env, as(constructor), count, argv.data(), &result);
+    assert(err == 0);
+
+    return as(result);
   }
 
   ScopeState *
@@ -650,7 +686,7 @@ protected:
     int err;
 
     bool result;
-    err = js_strict_equals(env, as<JSIReferenceValue>(a)->value(), as<JSIReferenceValue>(b)->value(), &result);
+    err = js_strict_equals(env, as(a), as(b), &result);
     assert(err);
 
     return result;
@@ -661,19 +697,13 @@ protected:
     int err;
 
     bool result;
-    err = js_instanceof(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(constructor)->value(), &result);
+    err = js_instanceof(env, as(object), as(constructor), &result);
     assert(err == 0);
 
     return result;
   }
 
 private:
-  template <typename T>
-  inline const T *
-  as (const jsi::Value &v) const {
-    return as<T>(getPointerValue(v));
-  }
-
   template <typename T>
   inline const T *
   as (const jsi::Pointer &p) const {
@@ -684,6 +714,16 @@ private:
   inline const T *
   as (const PointerValue *pv) const {
     return reinterpret_cast<const T *>(pv);
+  }
+
+  inline js_value_t *
+  as (const jsi::Pointer &p) const {
+    return as(getPointerValue(p));
+  }
+
+  inline js_value_t *
+  as (const PointerValue *pv) const {
+    return as<JSIReferenceValue>(pv)->value();
   }
 
   inline js_value_t *
@@ -724,7 +764,7 @@ private:
     err = js_open_escapable_handle_scope(env, &scope);
     assert(err == 0);
 
-    err = js_escape_handle(env, scope, as<JSIReferenceValue>(v)->value(), &value);
+    err = js_escape_handle(env, scope, as(reinterpret_cast<const jsi::Pointer &>(v)), &value);
     assert(err == 0);
 
     err = js_close_escapable_handle_scope(env, scope);
@@ -787,8 +827,8 @@ private:
     std::shared_ptr<const jsi::Buffer> buffer;
     std::string file;
 
-    JSIPreparedJavaScript(std::shared_ptr<const jsi::Buffer> &&buffer, std::string file)
-        : buffer(std::move(buffer)),
+    JSIPreparedJavaScript(std::shared_ptr<const jsi::Buffer> buffer, std::string file)
+        : buffer(buffer),
           file(file) {}
   };
 
