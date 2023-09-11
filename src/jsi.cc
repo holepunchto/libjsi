@@ -117,24 +117,39 @@ struct JSIRuntime : jsi::Runtime {
   jsi::Value
   evaluateJavaScript (
     const std::shared_ptr<const jsi::Buffer> &buffer,
-    const std::string &sourceURL
+    const std::string &file
   ) override {
-    return jsi::Value::null();
+    int err;
+
+    const utf8_t *str = buffer->data();
+    size_t len = buffer->size();
+
+    js_value_t *source;
+    err = js_create_string_utf8(env, str, len, &source);
+    assert(err == 0);
+
+    js_value_t *result;
+    err = js_run_script(env, file.data(), file.length(), 0, source, &result);
+    assert(err == 0);
+
+    return as(result);
   }
 
   std::shared_ptr<const jsi::PreparedJavaScript>
   prepareJavaScript (
     const std::shared_ptr<const jsi::Buffer> &buffer,
-    std::string sourceURL
+    std::string file
   ) override {
-    return nullptr;
+    return std::make_shared<JSIPreparedJavaScript>(buffer, file);
   }
 
   jsi::Value
   evaluatePreparedJavaScript (
     const std::shared_ptr<const jsi::PreparedJavaScript> &js
   ) override {
-    return jsi::Value::null();
+    auto prepared = reinterpret_cast<const JSIPreparedJavaScript *>(js.get());
+
+    return evaluateJavaScript(prepared->buffer, prepared->file);
   }
 
   bool
@@ -767,6 +782,15 @@ private:
       return make<jsi::BigInt>(new JSIReferenceValue(env, v));
     }
   }
+
+  struct JSIPreparedJavaScript : jsi::PreparedJavaScript {
+    std::shared_ptr<const jsi::Buffer> buffer;
+    std::string file;
+
+    JSIPreparedJavaScript(std::shared_ptr<const jsi::Buffer> &&buffer, std::string file)
+        : buffer(std::move(buffer)),
+          file(file) {}
+  };
 
   struct JSIReferenceValue : PointerValue {
     friend struct JSIRuntime;
