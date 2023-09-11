@@ -353,17 +353,34 @@ protected:
 
   bool
   hasNativeState (const jsi::Object &object) override {
-    return false;
+    int err;
+
+    bool result;
+    err = js_is_wrapped(env, as<JSIReferenceValue>(object)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   std::shared_ptr<jsi::NativeState>
   getNativeState (const jsi::Object &object) override {
-    return nullptr;
+    int err;
+
+    JSINativeStateReference *ref;
+    err = js_unwrap(env, as<JSIReferenceValue>(object)->value(), (void **) &ref);
+    assert(err == 0);
+
+    return ref->state;
   }
 
   void
   setNativeState (const jsi::Object &object, std::shared_ptr<jsi::NativeState> state) override {
-    return;
+    int err;
+
+    auto ref = new JSINativeStateReference(std::move(state));
+
+    err = js_wrap(env, as<JSIReferenceValue>(object)->value(), ref, on_js_finalize<JSINativeStateReference>, ref, nullptr);
+    assert(err == 0);
   }
 
   jsi::Value
@@ -423,7 +440,13 @@ protected:
 
   jsi::Array
   getPropertyNames (const jsi::Object &object) override {
-    return make<jsi::Array>(nullptr);
+    int err;
+
+    js_value_t *value;
+    err = js_get_property_names(env, as<JSIReferenceValue>(object)->value(), &value);
+    assert(err == 0);
+
+    return make<jsi::Array>(new JSIReferenceValue(env, value));
   }
 
   jsi::WeakObject
@@ -687,5 +710,12 @@ private:
     data () {
       return buffer->data();
     }
+  };
+
+  struct JSINativeStateReference {
+    std::shared_ptr<jsi::NativeState> state;
+
+    JSINativeStateReference(std::shared_ptr<jsi::NativeState> &&state)
+        : state(std::move(state)) {}
   };
 };
