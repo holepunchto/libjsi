@@ -153,7 +153,7 @@ struct JSIRuntime : jsi::Runtime {
 
   bool
   drainMicrotasks (int maxMicrotasksHint = -1) override {
-    std::abort(); // TODO
+    return true; // Happens automatically at the JavaScript/C boundary
   }
 
   jsi::Object
