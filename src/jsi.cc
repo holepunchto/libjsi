@@ -177,27 +177,27 @@ struct JSIRuntime : jsi::Runtime {
 protected:
   PointerValue *
   cloneSymbol (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
+    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
   }
 
   PointerValue *
   cloneBigInt (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
+    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
   }
 
   PointerValue *
   cloneString (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
+    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
   }
 
   PointerValue *
   cloneObject (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
+    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
   }
 
   PointerValue *
   clonePropNameID (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
+    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
   }
 
   jsi::PropNameID
@@ -234,7 +234,7 @@ protected:
 
   std::string
   utf8 (const jsi::PropNameID &prop) override {
-    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(prop))->toString();
+    return as<JSIReferenceValue>(prop)->toString();
   }
 
   bool
@@ -244,7 +244,7 @@ protected:
 
   std::string
   symbolToString (const jsi::Symbol &sym) override {
-    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(sym))->toString();
+    return as<JSIReferenceValue>(sym)->toString();
   }
 
   jsi::BigInt
@@ -313,7 +313,7 @@ protected:
 
   std::string
   utf8 (const jsi::String &string) override {
-    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(string))->toString();
+    return as<JSIReferenceValue>(string)->toString();
   }
 
   jsi::Value
@@ -428,12 +428,12 @@ protected:
 
   jsi::WeakObject
   createWeakObject (const jsi::Object &object) override {
-    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(getPointerValue(object))->value()));
+    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, as<JSIReferenceValue>(object)->value()));
   }
 
   jsi::Value
   lockWeakObject (const jsi::WeakObject &object) override {
-    return make<jsi::Object>(new JSIReferenceValue(env, reinterpret_cast<const JSIWeakReferenceValue *>(getPointerValue(object))->value()));
+    return make<jsi::Object>(new JSIReferenceValue(env, as<JSIWeakReferenceValue>(object)->value()));
   }
 
   jsi::Array
@@ -536,6 +536,18 @@ protected:
   }
 
 private:
+  template <typename T>
+  inline const T *
+  as (const jsi::Pointer &p) const {
+    return as<T>(getPointerValue(p));
+  }
+
+  template <typename T>
+  inline const T *
+  as (const PointerValue *pv) const {
+    return reinterpret_cast<const T *>(pv);
+  }
+
   struct JSIReferenceValue : PointerValue {
     friend struct JSIRuntime;
 
