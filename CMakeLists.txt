@@ -22,6 +22,7 @@ target_sources(
     include/jsi.h
   PRIVATE
     src/jsi.cc
+    src/jsi/instrumentation.h
     src/jsi/jsi.h
     src/jsi/jsi-inl.h
 )
