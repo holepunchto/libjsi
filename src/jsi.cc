@@ -28,6 +28,12 @@ on_js_platform_init (void) {
   assert(err == 0);
 }
 
+template <typename T>
+static void
+on_js_finalize (js_env_t *, void *data, void *finalize_hint) {
+  delete reinterpret_cast<T *>(finalize_hint);
+}
+
 struct JSIInstrumentation : jsi::Instrumentation {
   std::string
   getRecordedGCStats () override {
@@ -244,13 +250,25 @@ protected:
   }
 
   jsi::BigInt
-  createBigIntFromInt64 (int64_t value) override {
-    return make<jsi::BigInt>(nullptr);
+  createBigIntFromInt64 (int64_t n) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_bigint_int64(env, n, &value);
+    assert(err == 0);
+
+    return make<jsi::BigInt>(new JSIReferenceValue(env, value));
   }
 
   jsi::BigInt
-  createBigIntFromUint64 (uint64_t value) override {
-    return make<jsi::BigInt>(nullptr);
+  createBigIntFromUint64 (uint64_t n) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_bigint_uint64(env, n, &value);
+    assert(err == 0);
+
+    return make<jsi::BigInt>(new JSIReferenceValue(env, value));
   }
 
   bool
@@ -421,13 +439,27 @@ protected:
   }
 
   jsi::Array
-  createArray (size_t length) override {
-    return make<jsi::Array>(nullptr);
+  createArray (size_t len) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_array_with_length(env, len, &value);
+    assert(err == 0);
+
+    return make<jsi::Array>(new JSIReferenceValue(env, value));
   }
 
   jsi::ArrayBuffer
   createArrayBuffer (std::shared_ptr<jsi::MutableBuffer> buffer) override {
-    return make<jsi::ArrayBuffer>(nullptr);
+    int err;
+
+    auto ref = new JSIArrayBufferReference(std::move(buffer));
+
+    js_value_t *value;
+    err = js_create_external_arraybuffer(env, ref->data(), ref->size(), on_js_finalize<JSIArrayBufferReference>, ref, &value);
+    assert(err == 0);
+
+    return make<jsi::ArrayBuffer>(new JSIReferenceValue(env, value));
   }
 
   size_t
@@ -505,6 +537,7 @@ protected:
     return false;
   }
 
+private:
   struct JSIReferenceValue : PointerValue {
     friend struct JSIRuntime;
 
@@ -576,6 +609,23 @@ protected:
     void
     invalidate () override {
       delete this;
+    }
+  };
+
+  struct JSIArrayBufferReference {
+    std::shared_ptr<jsi::MutableBuffer> buffer;
+
+    JSIArrayBufferReference(std::shared_ptr<jsi::MutableBuffer> &&buffer)
+        : buffer(std::move(buffer)) {}
+
+    size_t
+    size () const {
+      return buffer->size();
+    }
+
+    uint8_t *
+    data () {
+      return buffer->data();
     }
   };
 };
