@@ -91,9 +91,6 @@ struct JSIInstrumentation : jsi::Instrumentation {
 static JSIInstrumentation instrumentation;
 
 struct JSIRuntime : jsi::Runtime {
-  friend struct JSIStringValue;
-  friend struct JSIObjectValue;
-
   uv_loop_t loop;
   js_env_t *env;
 
@@ -833,8 +830,6 @@ private:
   };
 
   struct JSIReferenceValue : PointerValue {
-    friend struct JSIRuntime;
-
     js_env_t *env;
     js_ref_t *ref;
 
@@ -907,8 +902,6 @@ private:
   };
 
   struct JSIWeakReferenceValue : PointerValue {
-    friend struct JSIRuntime;
-
     js_env_t *env;
     js_ref_t *ref;
 
