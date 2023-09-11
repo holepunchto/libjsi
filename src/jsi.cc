@@ -239,7 +239,7 @@ protected:
 
   bool
   compare (const jsi::PropNameID &a, const jsi::PropNameID &b) override {
-    return false;
+    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
   }
 
   std::string
@@ -512,22 +512,33 @@ protected:
 
   bool
   strictEquals (const jsi::Symbol &a, const jsi::Symbol &b) const override {
-    return false;
+    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::BigInt &a, const jsi::BigInt &b) const override {
-    return false;
+    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::String &a, const jsi::String &b) const override {
-    return false;
+    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::Object &a, const jsi::Object &b) const override {
-    return false;
+    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+  }
+
+  inline bool
+  strictEquals (const jsi::Pointer &a, const jsi::Pointer &b) const {
+    int err;
+
+    bool result;
+    err = js_strict_equals(env, as<JSIReferenceValue>(a)->value(), as<JSIReferenceValue>(b)->value(), &result);
+    assert(err);
+
+    return result;
   }
 
   bool
