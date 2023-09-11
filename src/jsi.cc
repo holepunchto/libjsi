@@ -82,6 +82,8 @@ struct JSIInstrumentation : jsi::Instrumentation {
   }
 };
 
+static JSIInstrumentation instrumentation;
+
 struct JSIRuntime : jsi::Runtime {
   friend struct JSIStringValue;
   friend struct JSIObjectValue;
@@ -144,7 +146,7 @@ struct JSIRuntime : jsi::Runtime {
     err = js_get_global(env, &global);
     assert(err == 0);
 
-    return make<jsi::Object>(new JSIObjectValue(env, global));
+    return make<jsi::Object>(new JSIReferenceValue(env, global));
   }
 
   std::string
@@ -165,59 +167,70 @@ struct JSIRuntime : jsi::Runtime {
 
   jsi::Instrumentation &
   instrumentation () override {
-    static JSIInstrumentation instrumentation;
-    return instrumentation;
+    return ::instrumentation;
   }
 
 protected:
   PointerValue *
   cloneSymbol (const PointerValue *pv) override {
-    return nullptr;
+    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
   }
 
   PointerValue *
   cloneBigInt (const PointerValue *pv) override {
-    return nullptr;
+    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
   }
 
   PointerValue *
   cloneString (const PointerValue *pv) override {
-    return nullptr;
+    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
   }
 
   PointerValue *
   cloneObject (const PointerValue *pv) override {
-    return nullptr;
+    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
   }
 
   PointerValue *
   clonePropNameID (const PointerValue *pv) override {
-    return nullptr;
+    return new JSIReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(pv)->ref);
   }
 
   jsi::PropNameID
-  createPropNameIDFromAscii (const char *str, size_t length) override {
-    return make<jsi::PropNameID>(nullptr);
+  createPropNameIDFromAscii (const char *str, size_t len) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
+    assert(err == 0);
+
+    return make<jsi::PropNameID>(new JSIReferenceValue(env, value));
   }
 
   jsi::PropNameID
-  createPropNameIDFromUtf8 (const uint8_t *utf8, size_t length) override {
-    return make<jsi::PropNameID>(nullptr);
+  createPropNameIDFromUtf8 (const uint8_t *str, size_t len) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_string_utf8(env, str, len, &value);
+    assert(err == 0);
+
+    return make<jsi::PropNameID>(new JSIReferenceValue(env, value));
   }
 
   jsi::PropNameID
   createPropNameIDFromString (const jsi::String &str) override {
-    return make<jsi::PropNameID>(nullptr);
+    return make<jsi::PropNameID>(cloneString(getPointerValue(str)));
   }
 
   jsi::PropNameID
   createPropNameIDFromSymbol (const jsi::Symbol &sym) override {
-    return make<jsi::PropNameID>(nullptr);
+    return make<jsi::PropNameID>(cloneSymbol(getPointerValue(sym)));
   }
 
   std::string
   utf8 (const jsi::PropNameID &prop) override {
-    return nullptr;
+    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(prop))->toString();
   }
 
   bool
@@ -227,7 +240,7 @@ protected:
 
   std::string
   symbolToString (const jsi::Symbol &sym) override {
-    return nullptr;
+    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(sym))->toString();
   }
 
   jsi::BigInt
@@ -261,18 +274,30 @@ protected:
   }
 
   jsi::String
-  createStringFromAscii (const char *str, size_t length) override {
-    return make<jsi::String>(new JSIStringValue(std::string(str, length)));
+  createStringFromAscii (const char *str, size_t len) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
+    assert(err == 0);
+
+    return make<jsi::String>(new JSIReferenceValue(env, value));
   }
 
   jsi::String
-  createStringFromUtf8 (const uint8_t *str, size_t length) override {
-    return make<jsi::String>(new JSIStringValue(std::string(reinterpret_cast<const char *>(str), length)));
+  createStringFromUtf8 (const uint8_t *str, size_t len) override {
+    int err;
+
+    js_value_t *value;
+    err = js_create_string_utf8(env, str, len, &value);
+    assert(err == 0);
+
+    return make<jsi::String>(new JSIReferenceValue(env, value));
   }
 
   std::string
   utf8 (const jsi::String &string) override {
-    return reinterpret_cast<const JSIStringValue *>(getPointerValue(string))->str;
+    return reinterpret_cast<const JSIReferenceValue *>(getPointerValue(string))->toString();
   }
 
   jsi::Value
@@ -284,11 +309,11 @@ protected:
   createObject () override {
     int err;
 
-    js_value_t *object;
-    err = js_create_object(env, &object);
+    js_value_t *value;
+    err = js_create_object(env, &value);
     assert(err == 0);
 
-    return make<jsi::Object>(new JSIObjectValue(env, object));
+    return make<jsi::Object>(new JSIReferenceValue(env, value));
   }
 
   jsi::Object
@@ -480,47 +505,76 @@ protected:
     return false;
   }
 
-  struct JSIStringValue : PointerValue {
-    friend struct JSIRuntime;
-
-    std::string str;
-
-    JSIStringValue(std::string str)
-        : str(str) {}
-
-    ~JSIStringValue() {}
-
-  protected:
-    void
-    invalidate () {
-      delete this;
-    }
-  };
-
-  struct JSIObjectValue : PointerValue {
+  struct JSIReferenceValue : PointerValue {
     friend struct JSIRuntime;
 
     js_env_t *env;
     js_ref_t *ref;
 
-    JSIObjectValue(js_env_t *env, js_value_t *object)
+    JSIReferenceValue(js_env_t *env, js_value_t *value)
         : env(env) {
       int err;
 
-      err = js_create_reference(env, object, 1, &ref);
+      err = js_create_reference(env, value, 1, &ref);
       assert(err == 0);
     }
 
-    ~JSIObjectValue() {
+    JSIReferenceValue(js_env_t *env, js_ref_t *ref)
+        : env(env),
+          ref(ref) {
       int err;
 
-      err = js_delete_reference(env, ref);
+      err = js_reference_ref(env, ref, nullptr);
       assert(err == 0);
+    }
+
+    ~JSIReferenceValue() override {
+      int err;
+
+      uint32_t refs;
+      err = js_reference_unref(env, ref, &refs);
+      assert(err == 0);
+
+      if (refs == 0) {
+        err = js_delete_reference(env, ref);
+        assert(err == 0);
+      }
+    }
+
+    inline js_value_t *
+    value () const {
+      int err;
+
+      js_value_t *value;
+      err = js_get_reference_value(env, ref, &value);
+      assert(err == 0);
+
+      return value;
+    }
+
+    inline std::string
+    toString () const {
+      int err;
+
+      auto value = this->value();
+
+      size_t len;
+      err = js_get_value_string_utf8(env, value, nullptr, 0, &len);
+      assert(err == 0);
+
+      std::string str;
+
+      str.reserve(len);
+
+      err = js_get_value_string_utf8(env, value, reinterpret_cast<utf8_t *>(str.data()), len, nullptr);
+      assert(err == 0);
+
+      return str;
     }
 
   protected:
     void
-    invalidate () {
+    invalidate () override {
       delete this;
     }
   };
