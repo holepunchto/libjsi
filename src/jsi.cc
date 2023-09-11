@@ -367,7 +367,7 @@ protected:
     int err;
 
     JSINativeStateReference *ref;
-    err = js_unwrap(env, as<JSIReferenceValue>(object)->value(), (void **) &ref);
+    err = js_unwrap(env, as<JSIReferenceValue>(object)->value(), reinterpret_cast<void **>(&ref));
     assert(err == 0);
 
     return ref->state;
@@ -384,48 +384,98 @@ protected:
   }
 
   jsi::Value
-  getProperty (const jsi::Object &object, const jsi::PropNameID &name) override {
-    return jsi::Value::undefined();
+  getProperty (const jsi::Object &object, const jsi::PropNameID &key) override {
+    int err;
+
+    js_value_t *value;
+    err = js_get_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &value);
+    assert(err == 0);
+
+    return as(value);
   }
 
   jsi::Value
-  getProperty (const jsi::Object &object, const jsi::String &name) override {
-    return jsi::Value::undefined();
+  getProperty (const jsi::Object &object, const jsi::String &key) override {
+    int err;
+
+    js_value_t *value;
+    err = js_get_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &value);
+    assert(err == 0);
+
+    return as(value);
   }
 
   bool
-  hasProperty (const jsi::Object &object, const jsi::PropNameID &name) override {
-    return false;
+  hasProperty (const jsi::Object &object, const jsi::PropNameID &key) override {
+    int err;
+
+    bool result;
+    err = js_has_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   bool
-  hasProperty (const jsi::Object &object, const jsi::String &name) override {
-    return false;
+  hasProperty (const jsi::Object &object, const jsi::String &key) override {
+    int err;
+
+    bool result;
+    err = js_has_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   void
-  setPropertyValue (const jsi::Object &object, const jsi::PropNameID &name, const jsi::Value &value) override {
-    return;
+  setPropertyValue (const jsi::Object &object, const jsi::PropNameID &key, const jsi::Value &value) override {
+    int err;
+
+    bool result;
+    err = js_set_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), as(value));
+    assert(err == 0);
   }
 
   void
-  setPropertyValue (const jsi::Object &object, const jsi::String &name, const jsi::Value &value) override {
-    return;
+  setPropertyValue (const jsi::Object &object, const jsi::String &key, const jsi::Value &value) override {
+    int err;
+
+    bool result;
+    err = js_set_property(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(key)->value(), as(value));
+    assert(err == 0);
   }
 
   bool
   isArray (const jsi::Object &object) const override {
-    return false;
+    int err;
+
+    bool result;
+    err = js_is_array(env, as<JSIReferenceValue>(object)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   bool
   isArrayBuffer (const jsi::Object &object) const override {
-    return false;
+    int err;
+
+    bool result;
+    err = js_is_arraybuffer(env, as<JSIReferenceValue>(object)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   bool
   isFunction (const jsi::Object &object) const override {
-    return false;
+    int err;
+
+    bool result;
+    err = js_is_function(env, as<JSIReferenceValue>(object)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
   bool
@@ -485,27 +535,54 @@ protected:
 
   size_t
   size (const jsi::Array &array) override {
-    return 0;
+    int err;
+
+    uint32_t len;
+    err = js_get_array_length(env, as<JSIReferenceValue>(array)->value(), &len);
+    assert(err == 0);
+
+    return len;
   }
 
   size_t
   size (const jsi::ArrayBuffer &arraybuffer) override {
-    return 0;
+    int err;
+
+    size_t len;
+    err = js_get_arraybuffer_info(env, as<JSIReferenceValue>(arraybuffer)->value(), nullptr, &len);
+    assert(err == 0);
+
+    return len;
   }
 
   uint8_t *
   data (const jsi::ArrayBuffer &arraybuffer) override {
-    return nullptr;
+    int err;
+
+    uint8_t *data;
+    err = js_get_arraybuffer_info(env, as<JSIReferenceValue>(arraybuffer)->value(), reinterpret_cast<void **>(data), nullptr);
+    assert(err == 0);
+
+    return data;
   }
 
   jsi::Value
   getValueAtIndex (const jsi::Array &array, size_t i) override {
-    return jsi::Value::null();
+    int err;
+
+    js_value_t *value;
+    err = js_get_element(env, as<JSIReferenceValue>(array)->value(), i, &value);
+    assert(err == 0);
+
+    return as(value);
   }
 
   void
   setValueAtIndexImpl (const jsi::Array &array, size_t i, const jsi::Value &value) override {
-    return;
+    int err;
+
+    err = js_set_element(env, as<JSIReferenceValue>(array)->value(), i, as(value));
+    assert(err == 0);
   }
 
   jsi::Function
@@ -565,11 +642,23 @@ protected:
   }
 
   bool
-  instanceOf (const jsi::Object &o, const jsi::Function &f) override {
-    return false;
+  instanceOf (const jsi::Object &object, const jsi::Function &constructor) override {
+    int err;
+
+    bool result;
+    err = js_instanceof(env, as<JSIReferenceValue>(object)->value(), as<JSIReferenceValue>(constructor)->value(), &result);
+    assert(err == 0);
+
+    return result;
   }
 
 private:
+  template <typename T>
+  inline const T *
+  as (const jsi::Value &v) const {
+    return as<T>(getPointerValue(v));
+  }
+
   template <typename T>
   inline const T *
   as (const jsi::Pointer &p) const {
@@ -580,6 +669,103 @@ private:
   inline const T *
   as (const PointerValue *pv) const {
     return reinterpret_cast<const T *>(pv);
+  }
+
+  inline js_value_t *
+  as (const jsi::Value &v) const {
+    int err;
+
+    js_value_t *value;
+
+    if (v.isUndefined()) {
+      err = js_get_undefined(env, &value);
+      assert(err == 0);
+
+      return value;
+    }
+
+    if (v.isNull()) {
+      err = js_get_null(env, &value);
+      assert(err == 0);
+
+      return value;
+    }
+
+    if (v.isBool()) {
+      err = js_get_boolean(env, v.getBool(), &value);
+      assert(err == 0);
+
+      return value;
+    }
+
+    if (v.isNumber()) {
+      err = js_create_double(env, v.getNumber(), &value);
+      assert(err == 0);
+
+      return value;
+    }
+
+    js_escapable_handle_scope_t *scope;
+    err = js_open_escapable_handle_scope(env, &scope);
+    assert(err == 0);
+
+    err = js_escape_handle(env, scope, as<JSIReferenceValue>(v)->value(), &value);
+    assert(err == 0);
+
+    err = js_close_escapable_handle_scope(env, scope);
+    assert(err == 0);
+
+    return value;
+  }
+
+  jsi::Value
+  as (js_value_t *v) const {
+    int err;
+
+    js_value_type_t type;
+    err = js_typeof(env, v, &type);
+    assert(err == 0);
+
+    switch (type) {
+    case js_undefined:
+      return jsi::Value::undefined();
+
+    case js_null:
+    default:
+      return jsi::Value::null();
+
+    case js_boolean: {
+      bool value;
+      err = js_get_value_bool(env, v, &value);
+      assert(err == 0);
+
+      return jsi::Value(value);
+    }
+
+    case js_number: {
+      double value;
+      err = js_get_value_double(env, v, &value);
+      assert(err == 0);
+
+      return jsi::Value(value);
+    }
+
+    case js_string:
+      return make<jsi::String>(new JSIReferenceValue(env, v));
+
+    case js_symbol:
+      return make<jsi::Symbol>(new JSIReferenceValue(env, v));
+
+    case js_object:
+    case js_external:
+      return make<jsi::Object>(new JSIReferenceValue(env, v));
+
+    case js_function:
+      return make<jsi::Function>(new JSIReferenceValue(env, v));
+
+    case js_bigint:
+      return make<jsi::BigInt>(new JSIReferenceValue(env, v));
+    }
   }
 
   struct JSIReferenceValue : PointerValue {
