@@ -3,10 +3,8 @@
 #include <utf.h>
 #include <uv.h>
 
-#include "jsi/instrumentation.h"
-#include "jsi/jsi.h"
-
-#include "../include/jsi.h"
+#include <jsi/instrumentation.h>
+#include <jsi/jsi.h>
 
 namespace jsi = facebook::jsi;
 
@@ -430,12 +428,12 @@ protected:
 
   jsi::WeakObject
   createWeakObject (const jsi::Object &object) override {
-    return make<jsi::WeakObject>(nullptr);
+    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, reinterpret_cast<const JSIReferenceValue *>(getPointerValue(object))->value()));
   }
 
   jsi::Value
   lockWeakObject (const jsi::WeakObject &object) override {
-    return jsi::Value::null();
+    return make<jsi::Object>(new JSIReferenceValue(env, reinterpret_cast<const JSIWeakReferenceValue *>(getPointerValue(object))->value()));
   }
 
   jsi::Array
@@ -603,6 +601,45 @@ private:
       assert(err == 0);
 
       return str;
+    }
+
+  protected:
+    void
+    invalidate () override {
+      delete this;
+    }
+  };
+
+  struct JSIWeakReferenceValue : PointerValue {
+    friend struct JSIRuntime;
+
+    js_env_t *env;
+    js_ref_t *ref;
+
+    JSIWeakReferenceValue(js_env_t *env, js_value_t *value)
+        : env(env) {
+      int err;
+
+      err = js_create_reference(env, value, 0, &ref);
+      assert(err == 0);
+    }
+
+    ~JSIWeakReferenceValue() override {
+      int err;
+
+      err = js_delete_reference(env, ref);
+      assert(err == 0);
+    }
+
+    inline js_value_t *
+    value () const {
+      int err;
+
+      js_value_t *value;
+      err = js_get_reference_value(env, ref, &value);
+      assert(err == 0);
+
+      return value;
     }
 
   protected:
