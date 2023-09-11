@@ -31,7 +31,7 @@ on_js_platform_init (void) {
 template <typename T>
 static void
 on_js_finalize (js_env_t *, void *data, void *finalize_hint) {
-  delete reinterpret_cast<T *>(finalize_hint);
+  delete static_cast<T *>(finalize_hint);
 }
 
 struct JSIInstrumentation : jsi::Instrumentation {
@@ -149,7 +149,7 @@ struct JSIRuntime : jsi::Runtime {
   evaluatePreparedJavaScript (
     const std::shared_ptr<const jsi::PreparedJavaScript> &js
   ) override {
-    auto prepared = reinterpret_cast<const JSIPreparedJavaScript *>(js.get());
+    auto prepared = static_cast<const JSIPreparedJavaScript *>(js.get());
 
     return evaluateJavaScript(prepared->buffer, prepared->file);
   }
@@ -256,7 +256,7 @@ protected:
 
   bool
   compare (const jsi::PropNameID &a, const jsi::PropNameID &b) override {
-    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+    return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   std::string
@@ -663,22 +663,22 @@ protected:
 
   bool
   strictEquals (const jsi::Symbol &a, const jsi::Symbol &b) const override {
-    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+    return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::BigInt &a, const jsi::BigInt &b) const override {
-    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+    return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::String &a, const jsi::String &b) const override {
-    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+    return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
   strictEquals (const jsi::Object &a, const jsi::Object &b) const override {
-    return strictEquals(reinterpret_cast<const jsi::Pointer &>(a), b);
+    return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   inline bool
@@ -713,7 +713,7 @@ private:
   template <typename T>
   inline const T *
   as (const PointerValue *pv) const {
-    return reinterpret_cast<const T *>(pv);
+    return static_cast<const T *>(pv);
   }
 
   inline js_value_t *
@@ -764,7 +764,7 @@ private:
     err = js_open_escapable_handle_scope(env, &scope);
     assert(err == 0);
 
-    err = js_escape_handle(env, scope, as(reinterpret_cast<const jsi::Pointer &>(v)), &value);
+    err = js_escape_handle(env, scope, as(getPointerValue(v)), &value);
     assert(err == 0);
 
     err = js_close_escapable_handle_scope(env, scope);
