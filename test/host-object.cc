@@ -32,11 +32,14 @@ main () {
 
   JSIRuntime runtime(platform);
 
+  auto host = std::make_shared<HostObject>();
+
   auto object = runtime
                   .global()
-                  .createFromHostObject(runtime, std::make_shared<HostObject>());
+                  .createFromHostObject(runtime, host);
 
   assert(object.isHostObject(runtime));
+  assert(object.getHostObject(runtime) == host);
 
   auto value = object.getProperty(runtime, "foo");
   assert(getCalled);

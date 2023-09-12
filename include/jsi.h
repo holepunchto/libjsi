@@ -403,6 +403,9 @@ protected:
     err = js_create_delegate(env, &callbacks, ref, finalize<JSIHostObjectReference>, ref, &result);
     assert(err == 0);
 
+    err = js_wrap(env, result, ref, nullptr, nullptr, nullptr);
+    assert(err == 0);
+
     err = js_add_type_tag(env, result, &JSIHostObjectReference::tag);
     assert(err == 0);
 
@@ -411,12 +414,24 @@ protected:
 
   std::shared_ptr<jsi::HostObject>
   getHostObject (const jsi::Object &object) override {
-    std::abort(); // TODO
+    int err;
+
+    JSIHostObjectReference *ref;
+    err = js_unwrap(env, as(object), reinterpret_cast<void **>(&ref));
+    assert(err == 0);
+
+    return ref->object;
   }
 
   jsi::HostFunctionType &
   getHostFunction (const jsi::Function &function) override {
-    std::abort(); // TODO
+    int err;
+
+    JSIHostFunctionReference *ref;
+    err = js_unwrap(env, as(function), reinterpret_cast<void **>(&ref));
+    assert(err == 0);
+
+    return ref->function;
   }
 
   bool
@@ -675,6 +690,9 @@ protected:
 
     js_value_t *result;
     err = js_create_function(env, str.data(), str.length(), JSIHostFunctionReference::call, ref, &result);
+    assert(err == 0);
+
+    err = js_wrap(env, result, ref, nullptr, nullptr, nullptr);
     assert(err == 0);
 
     err = js_add_type_tag(env, result, &JSIHostFunctionReference::tag);
