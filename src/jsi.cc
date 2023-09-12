@@ -10,31 +10,9 @@
 
 namespace jsi = facebook::jsi;
 
-static uv_loop_t *js_platform_loop = nullptr;
-
-static js_platform_t *js_platform = nullptr;
-
-static uv_once_t js_platform_guard = UV_ONCE_INIT;
-
-static void
-on_js_platform_init (void) {
-  int err;
-
-  js_platform_loop = new uv_loop_t();
-  err = uv_loop_init(js_platform_loop);
-  assert(err == 0);
-
-  err = js_create_platform(js_platform_loop, nullptr, &js_platform);
-  assert(err == 0);
-}
-
-template <typename T>
-static void
-on_js_finalize (js_env_t *, void *data, void *finalize_hint) {
-  delete static_cast<T *>(finalize_hint);
-}
-
 struct JSIInstrumentation : jsi::Instrumentation {
+  static JSIInstrumentation instance;
+
   std::string
   getRecordedGCStats () override {
     return "";
@@ -88,28 +66,58 @@ struct JSIInstrumentation : jsi::Instrumentation {
   }
 };
 
-static JSIInstrumentation instrumentation;
-
-struct JSIRuntime : jsi::Runtime {
+struct JSIPlatform {
   uv_loop_t loop;
-  js_env_t *env;
+  js_platform_t *platform;
 
-  JSIRuntime() {
-    uv_once(&js_platform_guard, on_js_platform_init);
-
+  JSIPlatform() {
     int err;
 
     err = uv_loop_init(&loop);
     assert(err == 0);
 
-    err = js_create_env(&loop, js_platform, nullptr, &env);
+    err = js_create_platform(&loop, nullptr, &platform);
     assert(err == 0);
   }
+
+  JSIPlatform(const JSIPlatform &) = delete;
+
+  ~JSIPlatform() {
+    int err;
+
+    err = js_destroy_platform(platform);
+    assert(err == 0);
+
+    err = uv_loop_close(&loop);
+    assert(err == 0);
+  }
+};
+
+struct JSIRuntime : jsi::Runtime {
+  uv_loop_t loop;
+  js_platform_t *platform;
+  js_env_t *env;
+
+  JSIRuntime(const JSIPlatform &platform)
+      : platform(platform.platform) {
+    int err;
+
+    err = uv_loop_init(&loop);
+    assert(err == 0);
+
+    err = js_create_env(&loop, this->platform, nullptr, &env);
+    assert(err == 0);
+  }
+
+  JSIRuntime(const JSIRuntime &) = delete;
 
   ~JSIRuntime() override {
     int err;
 
     err = js_destroy_env(env);
+    assert(err == 0);
+
+    err = uv_loop_close(&loop);
     assert(err == 0);
   }
 
@@ -169,7 +177,7 @@ struct JSIRuntime : jsi::Runtime {
     int err;
 
     const char *identifier;
-    err = js_get_platform_identifier(js_platform, &identifier);
+    err = js_get_platform_identifier(platform, &identifier);
     assert(err == 0);
 
     return std::string(identifier);
@@ -182,7 +190,7 @@ struct JSIRuntime : jsi::Runtime {
 
   jsi::Instrumentation &
   instrumentation () override {
-    return ::instrumentation;
+    return JSIInstrumentation::instance;
   }
 
 protected:
@@ -362,7 +370,7 @@ protected:
     };
 
     js_value_t *result;
-    err = js_create_delegate(env, &callbacks, ref, on_js_finalize<JSIHostObjectReference>, ref, &result);
+    err = js_create_delegate(env, &callbacks, ref, finalize<JSIHostObjectReference>, ref, &result);
     assert(err == 0);
 
     return make<jsi::Object>(new JSIReferenceValue(env, result));
@@ -406,7 +414,7 @@ protected:
 
     auto ref = new JSINativeStateReference(std::move(state));
 
-    err = js_wrap(env, as(object), ref, on_js_finalize<JSINativeStateReference>, ref, nullptr);
+    err = js_wrap(env, as(object), ref, finalize<JSINativeStateReference>, ref, nullptr);
     assert(err == 0);
   }
 
@@ -554,7 +562,7 @@ protected:
     auto ref = new JSIArrayBufferReference(std::move(buffer));
 
     js_value_t *value;
-    err = js_create_external_arraybuffer(env, ref->buffer->data(), ref->buffer->size(), on_js_finalize<JSIArrayBufferReference>, ref, &value);
+    err = js_create_external_arraybuffer(env, ref->buffer->data(), ref->buffer->size(), finalize<JSIArrayBufferReference>, ref, &value);
     assert(err == 0);
 
     return make<jsi::ArrayBuffer>(new JSIReferenceValue(env, value));
@@ -718,6 +726,12 @@ protected:
   }
 
 private:
+  template <typename T>
+  static void
+  finalize (js_env_t *, void *data, void *finalize_hint) {
+    delete static_cast<T *>(finalize_hint);
+  }
+
   template <typename T>
   inline const T *
   as (const jsi::Pointer &p) const {
