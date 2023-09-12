@@ -1,8 +1,16 @@
 list(APPEND tests
+  basic
 )
 
 foreach(test IN LISTS tests)
-  add_executable(${test} ${test}.c)
+  add_executable(${test} ${test}.cc jsi/stubs.cc)
+
+  set_target_properties(
+    ${test}
+    PROPERTIES
+    C_STANDARD 99
+    CXX_STANDARD 17
+  )
 
   target_link_libraries(
     ${test}
@@ -13,7 +21,7 @@ foreach(test IN LISTS tests)
   target_include_directories(
     ${test}
     PRIVATE
-      $<TARGET_PROPERTY:jsi,INTERFACE_INCLUDE_DIRECTORIES>
+      $<TARGET_PROPERTY:jsi,INCLUDE_DIRECTORIES>
   )
 
   add_test(
