@@ -34,9 +34,7 @@ main () {
 
   auto host = std::make_shared<HostObject>();
 
-  auto object = runtime
-                  .global()
-                  .createFromHostObject(runtime, host);
+  auto object = jsi::Object::createFromHostObject(runtime, host);
 
   assert(object.isHostObject(runtime));
   assert(object.getHostObject(runtime) == host);

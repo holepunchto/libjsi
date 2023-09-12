@@ -1,4 +1,5 @@
 list(APPEND tests
+  host-function
   host-object
 )
 
