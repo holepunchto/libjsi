@@ -308,12 +308,24 @@ protected:
 
   bool
   bigintIsInt64 (const jsi::BigInt &bigint) override {
-    std::abort(); // TODO
+    int err;
+
+    bool lossless;
+    err = js_get_value_bigint_int64(env, as(bigint), nullptr, &lossless);
+    assert(err == 0);
+
+    return lossless;
   }
 
   bool
   bigintIsUint64 (const jsi::BigInt &bigint) override {
-    std::abort(); // TODO
+    int err;
+
+    bool lossless;
+    err = js_get_value_bigint_uint64(env, as(bigint), nullptr, &lossless);
+    assert(err == 0);
+
+    return lossless;
   }
 
   uint64_t
