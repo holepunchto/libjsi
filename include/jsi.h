@@ -937,9 +937,7 @@ private:
       err = js_get_value_string_utf8(env, value, nullptr, 0, &len);
       assert(err == 0);
 
-      std::string str;
-
-      str.reserve(len);
+      std::string str(len, 0);
 
       err = js_get_value_string_utf8(env, value, reinterpret_cast<utf8_t *>(str.data()), len, nullptr);
       assert(err == 0);

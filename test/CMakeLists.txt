@@ -1,5 +1,5 @@
 list(APPEND tests
-  basic
+  host-object
 )
 
 foreach(test IN LISTS tests)
