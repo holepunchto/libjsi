@@ -92,7 +92,14 @@ struct JSIPlatform {
     err = js_destroy_platform(platform);
     assert(err == 0);
 
-    err = uv_loop_close(&loop);
+    do {
+      err = uv_loop_close(&loop);
+
+      if (err == UV_EBUSY) {
+        uv_run(&loop, UV_RUN_DEFAULT);
+      }
+    } while (err == UV_EBUSY);
+
     assert(err == 0);
   }
 };
@@ -121,7 +128,14 @@ struct JSIRuntime : jsi::Runtime {
     err = js_destroy_env(env);
     assert(err == 0);
 
-    err = uv_loop_close(&loop);
+    do {
+      err = uv_loop_close(&loop);
+
+      if (err == UV_EBUSY) {
+        uv_run(&loop, UV_RUN_DEFAULT);
+      }
+    } while (err == UV_EBUSY);
+
     assert(err == 0);
   }
 
