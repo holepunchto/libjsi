@@ -373,7 +373,10 @@ protected:
 
   jsi::Value
   createValueFromJsonUtf8 (const uint8_t *json, size_t length) override {
-    std::abort(); // TODO
+    return global()
+      .getPropertyAsObject(*this, "JSON")
+      .getPropertyAsFunction(*this, "parse")
+      .call(*this, jsi::String::createFromUtf8(*this, json, length));
   }
 
   jsi::Object
