@@ -340,8 +340,13 @@ protected:
   }
 
   jsi::String
-  bigintToString (const jsi::BigInt &, int) override {
-    std::abort(); // TODO
+  bigintToString (const jsi::BigInt &bigint, int radix) override {
+    return global()
+      .getPropertyAsObject(*this, "BigInt")
+      .getPropertyAsObject(*this, "prototype")
+      .getPropertyAsFunction(*this, "toString")
+      .callWithThis(*this, jsi::Value(*this, bigint).asObject(*this), jsi::Value(radix))
+      .asString(*this);
   }
 
   jsi::String
