@@ -4,7 +4,7 @@ list(APPEND tests
 )
 
 foreach(test IN LISTS tests)
-  add_executable(${test} ${test}.cc jsi/stubs.cc)
+  add_executable(${test} ${test}.cc jsi/jsi.cc)
 
   set_target_properties(
     ${test}
