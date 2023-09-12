@@ -403,6 +403,9 @@ protected:
     err = js_create_delegate(env, &callbacks, ref, finalize<JSIHostObjectReference>, ref, &result);
     assert(err == 0);
 
+    err = js_add_type_tag(env, result, &JSIHostObjectReference::tag);
+    assert(err == 0);
+
     return make<jsi::Object>(new JSIReferenceValue(env, result));
   }
 
@@ -545,12 +548,24 @@ protected:
 
   bool
   isHostObject (const jsi::Object &object) const override {
-    return false; // TODO
+    int err;
+
+    bool result;
+    err = js_check_type_tag(env, as(object), &JSIHostObjectReference::tag, &result);
+    assert(err == 0);
+
+    return result;
   }
 
   bool
   isHostFunction (const jsi::Function &function) const override {
-    return false; // TODO
+    int err;
+
+    bool result;
+    err = js_check_type_tag(env, as(function), &JSIHostFunctionReference::tag, &result);
+    assert(err == 0);
+
+    return result;
   }
 
   jsi::Array
@@ -658,11 +673,14 @@ protected:
 
     auto str = as<JSIReferenceValue>(name)->toString();
 
-    js_value_t *value;
-    err = js_create_function(env, str.data(), str.length(), JSIHostFunctionReference::call, ref, &value);
+    js_value_t *result;
+    err = js_create_function(env, str.data(), str.length(), JSIHostFunctionReference::call, ref, &result);
     assert(err == 0);
 
-    return make<jsi::Function>(new JSIReferenceValue(env, value));
+    err = js_add_type_tag(env, result, &JSIHostFunctionReference::tag);
+    assert(err == 0);
+
+    return make<jsi::Function>(new JSIReferenceValue(env, result));
   }
 
   jsi::Value
@@ -1022,6 +1040,8 @@ private:
   };
 
   struct JSIHostObjectReference {
+    static constexpr js_type_tag_t tag = {0xc7096ad6f55c4256, 0x8083785f64f282fc};
+
     JSIRuntime &runtime;
     std::shared_ptr<jsi::HostObject> object;
 
@@ -1075,6 +1095,8 @@ private:
   };
 
   struct JSIHostFunctionReference {
+    static constexpr js_type_tag_t tag = {0xfab8af594a3d4e86, 0xbedeafddfc1ef064};
+
     JSIRuntime &runtime;
     jsi::HostFunctionType function;
 

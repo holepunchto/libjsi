@@ -36,6 +36,8 @@ main () {
                   .global()
                   .createFromHostObject(runtime, std::make_shared<HostObject>());
 
+  assert(object.isHostObject(runtime));
+
   auto value = object.getProperty(runtime, "foo");
   assert(getCalled);
   assert(value.isNumber());
