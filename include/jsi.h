@@ -442,7 +442,7 @@ protected:
     int err;
 
     bool result;
-    err = js_is_wrapped(env, as(object), &result);
+    err = js_check_type_tag(env, as(object), &JSINativeStateReference::tag, &result);
     assert(err == 0);
 
     return result;
@@ -465,7 +465,12 @@ protected:
 
     auto ref = new JSINativeStateReference(std::move(state));
 
-    err = js_wrap(env, as(object), ref, finalize<JSINativeStateReference>, ref, nullptr);
+    auto result = as(object);
+
+    err = js_wrap(env, result, ref, finalize<JSINativeStateReference>, ref, nullptr);
+    assert(err == 0);
+
+    err = js_add_type_tag(env, result, &JSINativeStateReference::tag);
     assert(err == 0);
   }
 
@@ -1052,6 +1057,8 @@ private:
   };
 
   struct JSINativeStateReference {
+    static constexpr js_type_tag_t tag = {0x5a84bf0d0e22401b, 0x858564a9aca352c2};
+
     std::shared_ptr<jsi::NativeState> state;
 
     JSINativeStateReference(std::shared_ptr<jsi::NativeState> &&state)
