@@ -120,11 +120,8 @@ struct JSIRuntime : jsi::Runtime {
   ) override {
     int err;
 
-    const utf8_t *str = buffer->data();
-    size_t len = buffer->size();
-
     js_value_t *source;
-    err = js_create_string_utf8(env, str, len, &source);
+    err = js_create_string_utf8(env, buffer->data(), buffer->size(), &source);
     assert(err == 0);
 
     js_value_t *result;
@@ -345,16 +342,30 @@ protected:
   createObject () override {
     int err;
 
-    js_value_t *value;
-    err = js_create_object(env, &value);
+    js_value_t *result;
+    err = js_create_object(env, &result);
     assert(err == 0);
 
-    return make<jsi::Object>(new JSIReferenceValue(env, value));
+    return make<jsi::Object>(new JSIReferenceValue(env, result));
   }
 
   jsi::Object
   createObject (std::shared_ptr<jsi::HostObject> object) override {
-    std::abort(); // TODO
+    int err;
+
+    auto ref = new JSIHostObjectReference(*this, std::move(object));
+
+    js_delegate_callbacks_t callbacks = {
+      .get = JSIHostObjectReference::get,
+      .set = JSIHostObjectReference::set,
+      .own_keys = JSIHostObjectReference::ownKeys,
+    };
+
+    js_value_t *result;
+    err = js_create_delegate(env, &callbacks, ref, on_js_finalize<JSIHostObjectReference>, ref, &result);
+    assert(err == 0);
+
+    return make<jsi::Object>(new JSIReferenceValue(env, result));
   }
 
   std::shared_ptr<jsi::HostObject>
@@ -363,7 +374,7 @@ protected:
   }
 
   jsi::HostFunctionType &
-  getHostFunction (const jsi::Function &fn) override {
+  getHostFunction (const jsi::Function &function) override {
     std::abort(); // TODO
   }
 
@@ -496,12 +507,12 @@ protected:
 
   bool
   isHostObject (const jsi::Object &object) const override {
-    std::abort(); // TODO
+    return false; // TODO
   }
 
   bool
-  isHostFunction (const jsi::Function &object) const override {
-    std::abort(); // TODO
+  isHostFunction (const jsi::Function &function) const override {
+    return false; // TODO
   }
 
   jsi::Array
@@ -605,7 +616,7 @@ protected:
   createFunctionFromHostFunction (const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType function) override {
     int err;
 
-    auto ref = new JSIHostFunctionReference(this, function);
+    auto ref = new JSIHostFunctionReference(*this, function);
 
     auto str = as<JSIReferenceValue>(name)->toString();
 
@@ -969,19 +980,63 @@ private:
   };
 
   struct JSIHostObjectReference {
+    JSIRuntime &runtime;
     std::shared_ptr<jsi::HostObject> object;
 
-    JSIHostObjectReference(std::shared_ptr<jsi::HostObject> &&object)
-        : object(std::move(object)) {}
+    JSIHostObjectReference(JSIRuntime &runtime, std::shared_ptr<jsi::HostObject> &&object)
+        : runtime(runtime),
+          object(std::move(object)) {}
 
     JSIHostObjectReference(const JSIHostObjectReference &) = delete;
+
+    static js_value_t *
+    get (js_env_t *env, js_value_t *property, void *data) {
+      int err;
+
+      auto ref = static_cast<JSIHostObjectReference *>(data);
+
+      auto value = ref->object->get(ref->runtime, make<jsi::PropNameID>(new JSIReferenceValue(env, property)));
+
+      return ref->runtime.as(value);
+    }
+
+    static bool
+    set (js_env_t *env, js_value_t *property, js_value_t *value, void *data) {
+      int err;
+
+      auto ref = static_cast<JSIHostObjectReference *>(data);
+
+      ref->object->set(ref->runtime, make<jsi::PropNameID>(new JSIReferenceValue(env, property)), ref->runtime.as(value));
+
+      return true;
+    }
+
+    static js_value_t *
+    ownKeys (js_env_t *env, void *data) {
+      int err;
+
+      auto ref = static_cast<JSIHostObjectReference *>(data);
+
+      auto keys = ref->object->getPropertyNames(ref->runtime);
+
+      js_value_t *result;
+      err = js_create_array_with_length(env, keys.size(), &result);
+      assert(err == 0);
+
+      for (size_t i = 0, n = keys.size(); i < n; i++) {
+        err = js_set_element(env, result, i, ref->runtime.as(keys[i]));
+        assert(err == 0);
+      }
+
+      return result;
+    }
   };
 
   struct JSIHostFunctionReference {
-    JSIRuntime *runtime;
+    JSIRuntime &runtime;
     jsi::HostFunctionType function;
 
-    JSIHostFunctionReference(JSIRuntime *runtime, jsi::HostFunctionType function)
+    JSIHostFunctionReference(JSIRuntime &runtime, jsi::HostFunctionType function)
         : runtime(runtime),
           function(function) {}
 
@@ -1010,12 +1065,12 @@ private:
       args.reserve(argc);
 
       for (size_t i = 0; i < argc; i++) {
-        args.push_back(ref->runtime->as(argv[i]));
+        args.push_back(ref->runtime.as(argv[i]));
       }
 
-      auto value = ref->function(*ref->runtime, ref->runtime->as(receiver), args.data(), argc);
+      auto value = ref->function(ref->runtime, ref->runtime.as(receiver), args.data(), argc);
 
-      return ref->runtime->as(value);
+      return ref->runtime.as(value);
     }
   };
 };
