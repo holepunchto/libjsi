@@ -152,7 +152,7 @@ struct JSIRuntime : jsi::Runtime {
 
     js_value_t *result;
     err = js_run_script(env, file.data(), file.length(), 0, source, &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(result);
   }
@@ -187,7 +187,7 @@ struct JSIRuntime : jsi::Runtime {
     err = js_get_global(env, &global);
     assert(err == 0);
 
-    return make<jsi::Object>(new JSIReferenceValue(env, global));
+    return make<jsi::Object>(new JSIPointerValue(env, global));
   }
 
   std::string
@@ -214,27 +214,27 @@ struct JSIRuntime : jsi::Runtime {
 protected:
   PointerValue *
   cloneSymbol (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
+    return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
   cloneBigInt (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
+    return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
   cloneString (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
+    return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
   cloneObject (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
+    return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
   clonePropNameID (const PointerValue *pv) override {
-    return new JSIReferenceValue(env, as<JSIReferenceValue>(pv)->ref);
+    return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   jsi::PropNameID
@@ -243,9 +243,9 @@ protected:
 
     js_value_t *value;
     err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::PropNameID>(new JSIReferenceValue(env, value));
+    return make<jsi::PropNameID>(new JSIPointerValue(env, value));
   }
 
   jsi::PropNameID
@@ -254,9 +254,9 @@ protected:
 
     js_value_t *value;
     err = js_create_string_utf8(env, str, len, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::PropNameID>(new JSIReferenceValue(env, value));
+    return make<jsi::PropNameID>(new JSIPointerValue(env, value));
   }
 
   jsi::PropNameID
@@ -271,7 +271,7 @@ protected:
 
   std::string
   utf8 (const jsi::PropNameID &prop) override {
-    return as<JSIReferenceValue>(prop)->toString();
+    return as<JSIPointerValue>(prop)->toString(*this);
   }
 
   bool
@@ -281,7 +281,11 @@ protected:
 
   std::string
   symbolToString (const jsi::Symbol &sym) override {
-    return as<JSIReferenceValue>(sym)->toString();
+    return global()
+      .getPropertyAsFunction(*this, "String")
+      .call(*this, jsi::Value(*this, sym))
+      .asString(*this)
+      .utf8(*this);
   }
 
   jsi::BigInt
@@ -290,9 +294,9 @@ protected:
 
     js_value_t *value;
     err = js_create_bigint_int64(env, n, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::BigInt>(new JSIReferenceValue(env, value));
+    return make<jsi::BigInt>(new JSIPointerValue(env, value));
   }
 
   jsi::BigInt
@@ -301,9 +305,9 @@ protected:
 
     js_value_t *value;
     err = js_create_bigint_uint64(env, n, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::BigInt>(new JSIReferenceValue(env, value));
+    return make<jsi::BigInt>(new JSIPointerValue(env, value));
   }
 
   bool
@@ -312,7 +316,7 @@ protected:
 
     bool lossless;
     err = js_get_value_bigint_int64(env, as(bigint), nullptr, &lossless);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return lossless;
   }
@@ -323,7 +327,7 @@ protected:
 
     bool lossless;
     err = js_get_value_bigint_uint64(env, as(bigint), nullptr, &lossless);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return lossless;
   }
@@ -334,7 +338,7 @@ protected:
 
     uint64_t value;
     err = js_get_value_bigint_uint64(env, as(bigint), &value, nullptr);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return value;
   }
@@ -342,10 +346,8 @@ protected:
   jsi::String
   bigintToString (const jsi::BigInt &bigint, int radix) override {
     return global()
-      .getPropertyAsObject(*this, "BigInt")
-      .getPropertyAsObject(*this, "prototype")
-      .getPropertyAsFunction(*this, "toString")
-      .callWithThis(*this, jsi::Value(*this, bigint).asObject(*this), jsi::Value(radix))
+      .getPropertyAsFunction(*this, "String")
+      .call(*this, jsi::Value(*this, bigint))
       .asString(*this);
   }
 
@@ -355,9 +357,9 @@ protected:
 
     js_value_t *value;
     err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::String>(new JSIReferenceValue(env, value));
+    return make<jsi::String>(new JSIPointerValue(env, value));
   }
 
   jsi::String
@@ -366,14 +368,14 @@ protected:
 
     js_value_t *value;
     err = js_create_string_utf8(env, str, len, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::String>(new JSIReferenceValue(env, value));
+    return make<jsi::String>(new JSIPointerValue(env, value));
   }
 
   std::string
   utf8 (const jsi::String &string) override {
-    return as<JSIReferenceValue>(string)->toString();
+    return as<JSIPointerValue>(string)->toString(*this);
   }
 
   jsi::Value
@@ -390,9 +392,9 @@ protected:
 
     js_value_t *result;
     err = js_create_object(env, &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::Object>(new JSIReferenceValue(env, result));
+    return make<jsi::Object>(new JSIPointerValue(env, result));
   }
 
   jsi::Object
@@ -409,7 +411,7 @@ protected:
 
     js_value_t *result;
     err = js_create_delegate(env, &callbacks, ref, finalize<JSIHostObjectReference>, ref, &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     err = js_wrap(env, result, ref, nullptr, nullptr, nullptr);
     assert(err == 0);
@@ -417,7 +419,7 @@ protected:
     err = js_add_type_tag(env, result, &JSIHostObjectReference::tag);
     assert(err == 0);
 
-    return make<jsi::Object>(new JSIReferenceValue(env, result));
+    return make<jsi::Object>(new JSIPointerValue(env, result));
   }
 
   std::shared_ptr<jsi::HostObject>
@@ -473,7 +475,7 @@ protected:
     auto result = as(object);
 
     err = js_wrap(env, result, ref, finalize<JSINativeStateReference>, ref, nullptr);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     err = js_add_type_tag(env, result, &JSINativeStateReference::tag);
     assert(err == 0);
@@ -485,7 +487,7 @@ protected:
 
     js_value_t *value;
     err = js_get_property(env, as(object), as(key), &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(value);
   }
@@ -496,7 +498,7 @@ protected:
 
     js_value_t *value;
     err = js_get_property(env, as(object), as(key), &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(value);
   }
@@ -507,7 +509,7 @@ protected:
 
     bool result;
     err = js_has_property(env, as(object), as(key), &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return result;
   }
@@ -518,7 +520,7 @@ protected:
 
     bool result;
     err = js_has_property(env, as(object), as(key), &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return result;
   }
@@ -529,7 +531,7 @@ protected:
 
     bool result;
     err = js_set_property(env, as(object), as(key), as(value));
-    assert(err == 0);
+    if (err < 0) throw lastException();
   }
 
   void
@@ -538,7 +540,7 @@ protected:
 
     bool result;
     err = js_set_property(env, as(object), as(key), as(value));
-    assert(err == 0);
+    if (err < 0) throw lastException();
   }
 
   bool
@@ -602,19 +604,19 @@ protected:
 
     js_value_t *value;
     err = js_get_property_names(env, as(object), &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::Array>(new JSIReferenceValue(env, value));
+    return make<jsi::Array>(new JSIPointerValue(env, value));
   }
 
   jsi::WeakObject
   createWeakObject (const jsi::Object &object) override {
-    return make<jsi::WeakObject>(new JSIWeakReferenceValue(env, as(object)));
+    return make<jsi::WeakObject>(new JSIWeakPointerValue(env, as(object)));
   }
 
   jsi::Value
   lockWeakObject (const jsi::WeakObject &object) override {
-    return make<jsi::Object>(new JSIReferenceValue(env, as(object)));
+    return make<jsi::Object>(new JSIPointerValue(env, as(object)));
   }
 
   jsi::Array
@@ -623,9 +625,9 @@ protected:
 
     js_value_t *value;
     err = js_create_array_with_length(env, len, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::Array>(new JSIReferenceValue(env, value));
+    return make<jsi::Array>(new JSIPointerValue(env, value));
   }
 
   jsi::ArrayBuffer
@@ -636,9 +638,9 @@ protected:
 
     js_value_t *value;
     err = js_create_external_arraybuffer(env, ref->buffer->data(), ref->buffer->size(), finalize<JSIArrayBufferReference>, ref, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
-    return make<jsi::ArrayBuffer>(new JSIReferenceValue(env, value));
+    return make<jsi::ArrayBuffer>(new JSIPointerValue(env, value));
   }
 
   size_t
@@ -647,7 +649,7 @@ protected:
 
     uint32_t len;
     err = js_get_array_length(env, as(array), &len);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return len;
   }
@@ -658,7 +660,7 @@ protected:
 
     size_t len;
     err = js_get_arraybuffer_info(env, as(arraybuffer), nullptr, &len);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return len;
   }
@@ -669,7 +671,7 @@ protected:
 
     uint8_t *data;
     err = js_get_arraybuffer_info(env, as(arraybuffer), reinterpret_cast<void **>(data), nullptr);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return data;
   }
@@ -680,7 +682,7 @@ protected:
 
     js_value_t *value;
     err = js_get_element(env, as(array), i, &value);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(value);
   }
@@ -690,7 +692,7 @@ protected:
     int err;
 
     err = js_set_element(env, as(array), i, as(value));
-    assert(err == 0);
+    if (err < 0) throw lastException();
   }
 
   jsi::Function
@@ -699,11 +701,11 @@ protected:
 
     auto ref = new JSIHostFunctionReference(*this, function);
 
-    auto str = as<JSIReferenceValue>(name)->toString();
+    auto str = as<JSIPointerValue>(name)->toString(*this);
 
     js_value_t *result;
     err = js_create_function(env, str.data(), str.length(), JSIHostFunctionReference::call, ref, &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     err = js_wrap(env, result, ref, nullptr, nullptr, nullptr);
     assert(err == 0);
@@ -711,7 +713,7 @@ protected:
     err = js_add_type_tag(env, result, &JSIHostFunctionReference::tag);
     assert(err == 0);
 
-    return make<jsi::Function>(new JSIReferenceValue(env, result));
+    return make<jsi::Function>(new JSIPointerValue(env, result));
   }
 
   jsi::Value
@@ -728,7 +730,7 @@ protected:
 
     js_value_t *result;
     err = js_call_function(env, as(receiver), as(function), count, argv.data(), &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(result);
   }
@@ -747,7 +749,7 @@ protected:
 
     js_value_t *result;
     err = js_new_instance(env, as(constructor), count, argv.data(), &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return as(result);
   }
@@ -799,7 +801,7 @@ protected:
 
     bool result;
     err = js_instanceof(env, as(object), as(constructor), &result);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return result;
   }
@@ -830,7 +832,7 @@ private:
 
   inline js_value_t *
   as (const PointerValue *pv) const {
-    return as<JSIReferenceValue>(pv)->value();
+    return as<JSIPointerValue>(pv)->value();
   }
 
   inline js_value_t *
@@ -880,6 +882,11 @@ private:
     return value;
   }
 
+  inline js_value_t *
+  as (const jsi::JSError &err) {
+    return as(err.value());
+  }
+
   jsi::Value
   as (js_value_t *v) const {
     int err;
@@ -913,21 +920,32 @@ private:
     }
 
     case js_string:
-      return make<jsi::String>(new JSIReferenceValue(env, v));
+      return make<jsi::String>(new JSIPointerValue(env, v));
 
     case js_symbol:
-      return make<jsi::Symbol>(new JSIReferenceValue(env, v));
+      return make<jsi::Symbol>(new JSIPointerValue(env, v));
 
     case js_object:
     case js_external:
-      return make<jsi::Object>(new JSIReferenceValue(env, v));
+      return make<jsi::Object>(new JSIPointerValue(env, v));
 
     case js_function:
-      return make<jsi::Function>(new JSIReferenceValue(env, v));
+      return make<jsi::Function>(new JSIPointerValue(env, v));
 
     case js_bigint:
-      return make<jsi::BigInt>(new JSIReferenceValue(env, v));
+      return make<jsi::BigInt>(new JSIPointerValue(env, v));
     }
+  }
+
+  inline jsi::JSError
+  lastException () {
+    int err;
+
+    js_value_t *error;
+    err = js_get_and_clear_last_exception(env, &error);
+    assert(err == 0);
+
+    return jsi::JSError(*this, as(error));
   }
 
   struct JSIPreparedJavaScript : jsi::PreparedJavaScript {
@@ -941,11 +959,11 @@ private:
     JSIPreparedJavaScript(const JSIPreparedJavaScript &) = delete;
   };
 
-  struct JSIReferenceValue : PointerValue {
+  struct JSIPointerValue : PointerValue {
     js_env_t *env;
     js_ref_t *ref;
 
-    JSIReferenceValue(js_env_t *env, js_value_t *value)
+    JSIPointerValue(js_env_t *env, js_value_t *value)
         : env(env) {
       int err;
 
@@ -953,7 +971,7 @@ private:
       assert(err == 0);
     }
 
-    JSIReferenceValue(js_env_t *env, js_ref_t *ref)
+    JSIPointerValue(js_env_t *env, js_ref_t *ref)
         : env(env),
           ref(ref) {
       int err;
@@ -962,9 +980,9 @@ private:
       assert(err == 0);
     }
 
-    JSIReferenceValue(const JSIReferenceValue &) = delete;
+    JSIPointerValue(const JSIPointerValue &) = delete;
 
-    ~JSIReferenceValue() override {
+    ~JSIPointerValue() override {
       int err;
 
       uint32_t refs;
@@ -989,14 +1007,17 @@ private:
     }
 
     inline std::string
-    toString () const {
+    toString (JSIRuntime &runtime) const {
       int err;
 
       auto value = this->value();
 
+      err = js_coerce_to_string(env, value, &value);
+      if (err < 0) throw runtime.lastException();
+
       size_t len;
       err = js_get_value_string_utf8(env, value, nullptr, 0, &len);
-      assert(err == 0);
+      if (err < 0) throw runtime.lastException();
 
       std::string str(len, 0);
 
@@ -1013,11 +1034,11 @@ private:
     }
   };
 
-  struct JSIWeakReferenceValue : PointerValue {
+  struct JSIWeakPointerValue : PointerValue {
     js_env_t *env;
     js_ref_t *ref;
 
-    JSIWeakReferenceValue(js_env_t *env, js_value_t *value)
+    JSIWeakPointerValue(js_env_t *env, js_value_t *value)
         : env(env) {
       int err;
 
@@ -1025,9 +1046,9 @@ private:
       assert(err == 0);
     }
 
-    JSIWeakReferenceValue(const JSIWeakReferenceValue &) = delete;
+    JSIWeakPointerValue(const JSIWeakPointerValue &) = delete;
 
-    ~JSIWeakReferenceValue() override {
+    ~JSIWeakPointerValue() override {
       int err;
 
       err = js_delete_reference(env, ref);
@@ -1090,7 +1111,16 @@ private:
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
 
-      auto value = ref->object->get(ref->runtime, make<jsi::PropNameID>(new JSIReferenceValue(env, property)));
+      jsi::Value value;
+
+      try {
+        value = ref->object->get(ref->runtime, make<jsi::PropNameID>(new JSIPointerValue(env, property)));
+      } catch (const jsi::JSError &error) {
+        err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return nullptr;
+      }
 
       return ref->runtime.as(value);
     }
@@ -1101,7 +1131,14 @@ private:
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
 
-      ref->object->set(ref->runtime, make<jsi::PropNameID>(new JSIReferenceValue(env, property)), ref->runtime.as(value));
+      try {
+        ref->object->set(ref->runtime, make<jsi::PropNameID>(new JSIPointerValue(env, property)), ref->runtime.as(value));
+      } catch (const jsi::JSError &error) {
+        err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return false;
+      }
 
       return true;
     }
@@ -1112,7 +1149,16 @@ private:
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
 
-      auto keys = ref->object->getPropertyNames(ref->runtime);
+      std::vector<jsi::PropNameID> keys;
+
+      try {
+        keys = ref->object->getPropertyNames(ref->runtime);
+      } catch (const jsi::JSError &error) {
+        err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return nullptr;
+      }
 
       js_value_t *result;
       err = js_create_array_with_length(env, keys.size(), &result);
@@ -1165,7 +1211,16 @@ private:
         args.push_back(ref->runtime.as(argv[i]));
       }
 
-      auto value = ref->function(ref->runtime, ref->runtime.as(receiver), args.data(), argc);
+      jsi::Value value;
+
+      try {
+        value = ref->function(ref->runtime, ref->runtime.as(receiver), args.data(), argc);
+      } catch (const jsi::JSError &error) {
+        err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return nullptr;
+      }
 
       return ref->runtime.as(value);
     }

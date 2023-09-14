@@ -1,6 +1,8 @@
 list(APPEND tests
+  bigint-to-string
   host-function
   host-object
+  symbol-to-string
 )
 
 foreach(test IN LISTS tests)
