@@ -30,6 +30,7 @@ main () {
 
     assert(false);
   } catch (const jsi::JSError &error) {
+    assert(error.getMessage() == "get failed");
   }
 
   try {
@@ -37,5 +38,6 @@ main () {
 
     assert(false);
   } catch (const jsi::JSError &error) {
+    assert(error.getMessage() == "set failed");
   }
 }
