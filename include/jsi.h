@@ -148,7 +148,7 @@ struct JSIRuntime : jsi::Runtime {
 
     js_value_t *source;
     err = js_create_string_utf8(env, buffer->data(), buffer->size(), &source);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     js_value_t *result;
     err = js_run_script(env, file.data(), file.length(), 0, source, &result);
@@ -185,7 +185,7 @@ struct JSIRuntime : jsi::Runtime {
 
     js_value_t *global;
     err = js_get_global(env, &global);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return make<jsi::Object>(new JSIPointerValue(env, global));
   }
@@ -196,7 +196,7 @@ struct JSIRuntime : jsi::Runtime {
 
     const char *identifier;
     err = js_get_platform_identifier(platform, &identifier);
-    assert(err == 0);
+    if (err < 0) throw lastException();
 
     return std::string(identifier);
   }

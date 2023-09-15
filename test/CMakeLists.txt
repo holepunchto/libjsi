@@ -1,7 +1,9 @@
 list(APPEND tests
   bigint-to-string
   host-function
+  host-function-throw
   host-object
+  host-object-throw
   symbol-to-string
 )
 
