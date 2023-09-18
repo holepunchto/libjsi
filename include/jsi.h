@@ -109,8 +109,8 @@ struct JSIRuntime : jsi::Runtime {
   js_platform_t *platform;
   js_env_t *env;
 
-  JSIRuntime(const JSIPlatform &platform)
-      : platform(platform.platform) {
+  JSIRuntime(js_platform_t *platform)
+      : platform(platform) {
     int err;
 
     err = uv_loop_init(&loop);
@@ -119,6 +119,9 @@ struct JSIRuntime : jsi::Runtime {
     err = js_create_env(&loop, this->platform, nullptr, &env);
     assert(err == 0);
   }
+
+  JSIRuntime(const JSIPlatform &platform)
+      : JSIRuntime(platform.platform) {}
 
   JSIRuntime(const JSIRuntime &) = delete;
 
