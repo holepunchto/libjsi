@@ -793,7 +793,7 @@ protected:
 
     bool result;
     err = js_strict_equals(env, as(a), as(b), &result);
-    assert(err);
+    assert(err == 0);
 
     return result;
   }
