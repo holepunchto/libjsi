@@ -65,7 +65,7 @@ target_link_libraries(
 
 install(TARGETS jsi_shared jsi_static)
 
-install(DIRECTORY include/jsi DESTINATION include)
+install(FILES include/js.h DESTINATION include)
 
 if(PROJECT_IS_TOP_LEVEL)
   enable_testing()
