@@ -196,7 +196,7 @@ struct JSIRuntime : jsi::Runtime {
     err = js_get_global(env, &global);
     if (err < 0) throw lastException();
 
-    return make<jsi::Object>(env, global);
+    return make<jsi::Object>(global);
   }
 
   std::string
@@ -254,7 +254,7 @@ protected:
     err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::PropNameID>(env, value);
+    return make<jsi::PropNameID>(value);
   }
 
   jsi::PropNameID
@@ -265,7 +265,7 @@ protected:
     err = js_create_string_utf8(env, str, len, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::PropNameID>(env, value);
+    return make<jsi::PropNameID>(value);
   }
 
   jsi::PropNameID
@@ -305,7 +305,7 @@ protected:
     err = js_create_bigint_int64(env, n, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::BigInt>(env, value);
+    return make<jsi::BigInt>(value);
   }
 
   jsi::BigInt
@@ -316,7 +316,7 @@ protected:
     err = js_create_bigint_uint64(env, n, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::BigInt>(env, value);
+    return make<jsi::BigInt>(value);
   }
 
   bool
@@ -368,7 +368,7 @@ protected:
     err = js_create_string_utf8(env, reinterpret_cast<const utf8_t *>(str), len, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::String>(env, value);
+    return make<jsi::String>(value);
   }
 
   jsi::String
@@ -379,7 +379,7 @@ protected:
     err = js_create_string_utf8(env, str, len, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::String>(env, value);
+    return make<jsi::String>(value);
   }
 
   std::string
@@ -403,7 +403,7 @@ protected:
     err = js_create_object(env, &result);
     if (err < 0) throw lastException();
 
-    return make<jsi::Object>(env, result);
+    return make<jsi::Object>(result);
   }
 
   jsi::Object
@@ -428,7 +428,7 @@ protected:
     err = js_add_type_tag(env, result, &JSIHostObjectReference::tag);
     assert(err == 0);
 
-    return make<jsi::Object>(env, result);
+    return make<jsi::Object>(result);
   }
 
   std::shared_ptr<jsi::HostObject>
@@ -615,17 +615,17 @@ protected:
     err = js_get_property_names(env, as(object), &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::Array>(env, value);
+    return make<jsi::Array>(value);
   }
 
   jsi::WeakObject
   createWeakObject (const jsi::Object &object) override {
-    return make<jsi::WeakObject>(env, as(object));
+    return make<jsi::WeakObject>(as(object));
   }
 
   jsi::Value
   lockWeakObject (const jsi::WeakObject &object) override {
-    return make<jsi::Object>(env, as(object));
+    return make<jsi::Object>(as(object));
   }
 
   jsi::Array
@@ -636,7 +636,7 @@ protected:
     err = js_create_array_with_length(env, len, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::Array>(env, value);
+    return make<jsi::Array>(value);
   }
 
   jsi::ArrayBuffer
@@ -649,7 +649,7 @@ protected:
     err = js_create_external_arraybuffer(env, ref->buffer->data(), ref->buffer->size(), finalize<JSIArrayBufferReference>, ref, &value);
     if (err < 0) throw lastException();
 
-    return make<jsi::ArrayBuffer>(env, value);
+    return make<jsi::ArrayBuffer>(value);
   }
 
   size_t
@@ -722,7 +722,7 @@ protected:
     err = js_add_type_tag(env, result, &JSIHostFunctionReference::tag);
     assert(err == 0);
 
-    return make<jsi::Function>(env, result);
+    return make<jsi::Function>(result);
   }
 
   jsi::Value
@@ -823,14 +823,14 @@ private:
   }
 
   template <typename T>
-  static inline T
-  make (js_env_t *env, js_value_t *value) {
+  inline T
+  make (js_value_t *value) const {
     return Runtime::make<T>(new JSIPointerValue(env, value));
   }
 
   template <>
   inline jsi::WeakObject
-  make (js_env_t *env, js_value_t *value) {
+  make (js_value_t *value) const {
     return Runtime::make<jsi::WeakObject>(new JSIWeakPointerValue(env, value));
   }
 
@@ -941,20 +941,20 @@ private:
     }
 
     case js_string:
-      return make<jsi::String>(env, v);
+      return make<jsi::String>(v);
 
     case js_symbol:
-      return make<jsi::Symbol>(env, v);
+      return make<jsi::Symbol>(v);
 
     case js_object:
     case js_external:
-      return make<jsi::Object>(env, v);
+      return make<jsi::Object>(v);
 
     case js_function:
-      return make<jsi::Function>(env, v);
+      return make<jsi::Function>(v);
 
     case js_bigint:
-      return make<jsi::BigInt>(env, v);
+      return make<jsi::BigInt>(v);
     }
   }
 
@@ -1153,7 +1153,7 @@ private:
       jsi::Value value;
 
       try {
-        value = ref->object->get(ref->runtime, make<jsi::PropNameID>(env, property));
+        value = ref->object->get(ref->runtime, ref->runtime.make<jsi::PropNameID>(property));
       } catch (const jsi::JSError &error) {
         err = js_throw(env, ref->runtime.as(error));
         assert(err == 0);
@@ -1171,7 +1171,7 @@ private:
       auto ref = static_cast<JSIHostObjectReference *>(data);
 
       try {
-        ref->object->set(ref->runtime, make<jsi::PropNameID>(env, property), ref->runtime.as(value));
+        ref->object->set(ref->runtime, ref->runtime.make<jsi::PropNameID>(property), ref->runtime.as(value));
       } catch (const jsi::JSError &error) {
         err = js_throw(env, ref->runtime.as(error));
         assert(err == 0);
