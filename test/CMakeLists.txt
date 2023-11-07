@@ -13,8 +13,8 @@ foreach(test IN LISTS tests)
   set_target_properties(
     ${test}
     PROPERTIES
-    C_STANDARD 99
-    CXX_STANDARD 17
+    C_STANDARD 11
+    CXX_STANDARD 20
   )
 
   target_link_libraries(
@@ -27,6 +27,18 @@ foreach(test IN LISTS tests)
     ${test}
     PRIVATE
       $<TARGET_PROPERTY:jsi,INCLUDE_DIRECTORIES>
+  )
+
+  target_compile_definitions(
+    ${test}
+    PUBLIC
+      $<TARGET_PROPERTY:jsi,INTERFACE_COMPILE_DEFINITIONS>
+  )
+
+  target_compile_options(
+    ${test}
+    PUBLIC
+      $<TARGET_PROPERTY:jsi,INTERFACE_COMPILE_OPTIONS>
   )
 
   add_test(

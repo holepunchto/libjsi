@@ -11,8 +11,8 @@ add_library(jsi OBJECT)
 set_target_properties(
   jsi
   PROPERTIES
-  C_STANDARD 99
-  CXX_STANDARD 17
+  C_STANDARD 11
+  CXX_STANDARD 20
   POSITION_INDEPENDENT_CODE ON
 )
 
@@ -31,6 +31,18 @@ target_include_directories(
     $<TARGET_PROPERTY:js,INTERFACE_INCLUDE_DIRECTORIES>
   PRIVATE
     src
+)
+
+target_compile_definitions(
+  jsi
+  PUBLIC
+    $<TARGET_PROPERTY:js,INTERFACE_COMPILE_DEFINITIONS>
+)
+
+target_compile_options(
+  jsi
+  PUBLIC
+    $<TARGET_PROPERTY:js,INTERFACE_COMPILE_OPTIONS>
 )
 
 add_library(jsi_shared SHARED $<TARGET_OBJECTS:jsi>)
