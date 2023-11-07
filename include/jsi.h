@@ -679,7 +679,7 @@ protected:
     int err;
 
     uint8_t *data;
-    err = js_get_arraybuffer_info(env, as(arraybuffer), reinterpret_cast<void **>(data), nullptr);
+    err = js_get_arraybuffer_info(env, as(arraybuffer), reinterpret_cast<void **>(&data), nullptr);
     if (err < 0) throw lastException();
 
     return data;
