@@ -1159,6 +1159,11 @@ private:
         assert(err == 0);
 
         return nullptr;
+      } catch (const std::exception &error) {
+        err = js_throw_error(env, NULL, error.what());
+        assert(err == 0);
+
+        return nullptr;
       }
 
       return ref->runtime.as(value);
@@ -1174,6 +1179,11 @@ private:
         ref->object->set(ref->runtime, ref->runtime.make<jsi::PropNameID>(property), ref->runtime.as(value));
       } catch (const jsi::JSError &error) {
         err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return false;
+      } catch (const std::exception &error) {
+        err = js_throw_error(env, NULL, error.what());
         assert(err == 0);
 
         return false;
@@ -1194,6 +1204,11 @@ private:
         keys = ref->object->getPropertyNames(ref->runtime);
       } catch (const jsi::JSError &error) {
         err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return nullptr;
+      } catch (const std::exception &error) {
+        err = js_throw_error(env, NULL, error.what());
         assert(err == 0);
 
         return nullptr;
@@ -1259,6 +1274,11 @@ private:
         value = ref->function(ref->runtime, ref->runtime.as(receiver), args.data(), argc);
       } catch (const jsi::JSError &error) {
         err = js_throw(env, ref->runtime.as(error));
+        assert(err == 0);
+
+        return nullptr;
+      } catch (const std::exception &error) {
+        err = js_throw_error(env, NULL, error.what());
         assert(err == 0);
 
         return nullptr;
