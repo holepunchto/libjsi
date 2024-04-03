@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <jsi/jsi.h>
 
 #include "../include/jsi.h"
 
@@ -8,6 +7,8 @@ main () {
   JSIPlatform platform;
 
   JSIRuntime runtime(platform);
+
+  jsi::Scope scope(runtime);
 
   auto bigint = jsi::BigInt::fromInt64(runtime, 123456);
 

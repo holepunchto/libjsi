@@ -21,6 +21,8 @@ main () {
 
   JSIRuntime runtime(platform);
 
+  jsi::Scope scope(runtime);
+
   auto host = std::make_shared<HostObject>();
 
   auto object = jsi::Object::createFromHostObject(runtime, host);

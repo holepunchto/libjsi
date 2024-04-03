@@ -9,6 +9,8 @@ main () {
 
   JSIRuntime runtime(platform);
 
+  jsi::Scope scope(runtime);
+
   auto host = [&runtime] (jsi::Runtime &rt, const jsi::Value &receiver, const jsi::Value *args, size_t count) -> jsi::Value {
     throw jsi::JSError(runtime, "nope");
   };

@@ -765,11 +765,23 @@ protected:
 
   ScopeState *
   pushScope () override {
-    return nullptr;
+    int err;
+
+    js_handle_scope_t *scope;
+    err = js_open_handle_scope(env, &scope);
+    if (err < 0) throw lastException();
+
+    return reinterpret_cast<ScopeState *>(scope);
   }
 
   void
-  popScope (ScopeState *) override {
+  popScope (ScopeState *state) override {
+    int err;
+
+    auto scope = reinterpret_cast<js_handle_scope_t *>(state);
+    err = js_close_handle_scope(env, scope);
+    assert(err == 0);
+
     return;
   }
 

@@ -4,6 +4,7 @@ list(APPEND tests
   host-function-throw
   host-object
   host-object-throw
+  prop-name
   symbol-to-string
 )
 
