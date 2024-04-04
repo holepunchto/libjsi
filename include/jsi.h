@@ -1,7 +1,13 @@
 #pragma once
 
+#include <chrono>
+#include <deque>
+#include <exception>
+#include <functional>
 #include <memory>
+#include <ostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <assert.h>
@@ -183,8 +189,21 @@ struct JSIRuntime : jsi::Runtime {
     return evaluateJavaScript(prepared->buffer, prepared->file);
   }
 
+  void
+  queueMicrotask (const jsi::Function &callback) override {
+    microtask_queue.emplace_back(callback.getFunction(*this));
+  }
+
   bool
   drainMicrotasks (int maxMicrotasksHint = -1) override {
+    while (!microtask_queue.empty()) {
+      auto callback = std::move(microtask_queue.front());
+
+      microtask_queue.pop_front();
+
+      callback.call(*this);
+    }
+
     return true; // Happens automatically at the JavaScript/C boundary
   }
 
@@ -827,7 +846,12 @@ protected:
     return result;
   }
 
+  void
+  setExternalMemoryPressure (const jsi::Object &obj, size_t amount) override {}
+
 private:
+  std::deque<jsi::Function> microtask_queue;
+
   template <typename T>
   static void
   finalize (js_env_t *, void *data, void *finalize_hint) {

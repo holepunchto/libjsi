@@ -224,6 +224,14 @@ public:
     const std::shared_ptr<const PreparedJavaScript> &js
   ) = 0;
 
+  /// Queues a microtask in the JavaScript VM internal Microtask (a.k.a. Job in
+  /// ECMA262) queue, to be executed when the host drains microtasks in
+  /// its event loop implementation.
+  ///
+  /// \param callback a function to be executed as a microtask.
+  virtual void
+  queueMicrotask (const jsi::Function &callback) = 0;
+
   /// Drain the JavaScript VM internal Microtask (a.k.a. Job in ECMA262) queue.
   ///
   /// \param maxMicrotasksHint a hint to tell an implementation that it should
@@ -469,6 +477,10 @@ protected:
 
   virtual bool
   instanceOf (const Object &o, const Function &f) = 0;
+
+  /// See Object::setExternalMemoryPressure.
+  virtual void
+  setExternalMemoryPressure (const jsi::Object &obj, size_t amount) = 0;
 
   // These exist so derived classes can access the private parts of
   // Value, Symbol, String, and Object, which are all friends of Runtime.
@@ -990,6 +1002,17 @@ public:
   /// works.  I only need it in one place.)
   Array
   getPropertyNames (Runtime &runtime) const;
+
+  /// Inform the runtime that there is additional memory associated with a given
+  /// JavaScript object that is not visible to the GC. This can be used if an
+  /// object is known to retain some native memory, and may be used to guide
+  /// decisions about when to run garbage collection.
+  /// This method may be invoked multiple times on an object, and subsequent
+  /// calls will overwrite any previously set value. Once the object is garbage
+  /// collected, the associated external memory will be considered freed and may
+  /// no longer factor into GC decisions.
+  void
+  setExternalMemoryPressure (Runtime &runtime, size_t amt) const;
 
 protected:
   void
@@ -1703,6 +1726,11 @@ public:
   /// set to provided message.  This argument order is a bit weird,
   /// but necessary to avoid ambiguity with the above.
   JSError(std::string what, Runtime &rt, Value &&value);
+
+  /// Creates a JSError referring to the provided value, message and stack. This
+  /// constructor does not take a Runtime parameter, and therefore cannot result
+  /// in recursively invoking the JSError constructor.
+  JSError(Value &&value, std::string message, std::string stack);
 
   JSError(const JSError &) = default;
 
