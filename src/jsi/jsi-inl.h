@@ -12,36 +12,36 @@ namespace jsi {
 namespace detail {
 
 inline Value
-toValue (Runtime &, std::nullptr_t) {
+toValue(Runtime &, std::nullptr_t) {
   return Value::null();
 }
 inline Value
-toValue (Runtime &, bool b) {
+toValue(Runtime &, bool b) {
   return Value(b);
 }
 inline Value
-toValue (Runtime &, double d) {
+toValue(Runtime &, double d) {
   return Value(d);
 }
 inline Value
-toValue (Runtime &, float f) {
+toValue(Runtime &, float f) {
   return Value(static_cast<double>(f));
 }
 inline Value
-toValue (Runtime &, int i) {
+toValue(Runtime &, int i) {
   return Value(i);
 }
 inline Value
-toValue (Runtime &runtime, const char *str) {
+toValue(Runtime &runtime, const char *str) {
   return String::createFromAscii(runtime, str);
 }
 inline Value
-toValue (Runtime &runtime, const std::string &str) {
+toValue(Runtime &runtime, const std::string &str) {
   return String::createFromUtf8(runtime, str);
 }
 template <typename T>
 inline Value
-toValue (Runtime &runtime, const T &other) {
+toValue(Runtime &runtime, const T &other) {
   static_assert(
     std::is_base_of<Pointer, T>::value,
     "This type cannot be converted to Value"
@@ -49,31 +49,31 @@ toValue (Runtime &runtime, const T &other) {
   return Value(runtime, other);
 }
 inline Value
-toValue (Runtime &runtime, const Value &value) {
+toValue(Runtime &runtime, const Value &value) {
   return Value(runtime, value);
 }
 inline Value &&
-toValue (Runtime &, Value &&value) {
+toValue(Runtime &, Value &&value) {
   return std::move(value);
 }
 
 inline PropNameID
-toPropNameID (Runtime &runtime, const char *name) {
+toPropNameID(Runtime &runtime, const char *name) {
   return PropNameID::forAscii(runtime, name);
 }
 inline PropNameID
-toPropNameID (Runtime &runtime, const std::string &name) {
+toPropNameID(Runtime &runtime, const std::string &name) {
   return PropNameID::forUtf8(runtime, name);
 }
 inline PropNameID &&
-toPropNameID (Runtime &, PropNameID &&name) {
+toPropNameID(Runtime &, PropNameID &&name) {
   return std::move(name);
 }
 
 /// Helper to throw while still compiling with exceptions turned off.
 template <typename E, typename... Args>
 [[noreturn]] inline void
-throwOrDie (Args &&...args) {
+throwOrDie(Args &&...args) {
   std::rethrow_exception(
     std::make_exception_ptr(E{std::forward<Args>(args)...})
   );
@@ -104,6 +104,11 @@ Runtime::getPointerValue(
   const jsi::Value &value
 ) {
   return value.data_.pointer.ptr_;
+}
+
+Value
+Object::getPrototype(Runtime &runtime) const {
+  return runtime.getPrototypeOf(*this);
 }
 
 inline Value

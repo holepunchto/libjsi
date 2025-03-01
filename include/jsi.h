@@ -24,20 +24,20 @@ struct JSIInstrumentation : jsi::Instrumentation {
   static JSIInstrumentation instance;
 
   std::string
-  getRecordedGCStats () override {
+  getRecordedGCStats() override {
     return "";
   }
 
   std::unordered_map<std::string, int64_t>
-  getHeapInfo (bool) override {
+  getHeapInfo(bool) override {
     return std::unordered_map<std::string, int64_t>{};
   }
 
   void
-  collectGarbage (std::string) override {}
+  collectGarbage(std::string) override {}
 
   void
-  startTrackingHeapObjectStackTraces (
+  startTrackingHeapObjectStackTraces(
     std::function<void(
       uint64_t,
       std::chrono::microseconds,
@@ -46,32 +46,32 @@ struct JSIInstrumentation : jsi::Instrumentation {
   ) override {}
 
   void
-  stopTrackingHeapObjectStackTraces () override {}
+  stopTrackingHeapObjectStackTraces() override {}
 
   void
-  startHeapSampling (size_t) override {}
+  startHeapSampling(size_t) override {}
 
   void
-  stopHeapSampling (std::ostream &) override {}
+  stopHeapSampling(std::ostream &) override {}
 
   void
-  createSnapshotToFile (const std::string &) override {}
+  createSnapshotToFile(const std::string &, const HeapSnapshotOptions &options = {false}) override {}
 
   void
-  createSnapshotToStream (std::ostream &) override {}
+  createSnapshotToStream(std::ostream &, const HeapSnapshotOptions &options = {false}) override {}
 
   std::string
-  flushAndDisableBridgeTrafficTrace () override {
+  flushAndDisableBridgeTrafficTrace() override {
     std::abort();
   }
 
   void
-  writeBasicBlockProfileTraceToFile (const std::string &) const override {
+  writeBasicBlockProfileTraceToFile(const std::string &) const override {
     std::abort();
   }
 
   void
-  dumpProfilerSymbolsToFile (const std::string &) const override {
+  dumpProfilerSymbolsToFile(const std::string &) const override {
     std::abort();
   }
 };
@@ -155,7 +155,7 @@ struct JSIRuntime : jsi::Runtime {
   operator=(const JSIRuntime &) = delete;
 
   jsi::Value
-  evaluateJavaScript (
+  evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &file
   ) override {
@@ -173,7 +173,7 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   std::shared_ptr<const jsi::PreparedJavaScript>
-  prepareJavaScript (
+  prepareJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     std::string file
   ) override {
@@ -181,7 +181,7 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   jsi::Value
-  evaluatePreparedJavaScript (
+  evaluatePreparedJavaScript(
     const std::shared_ptr<const jsi::PreparedJavaScript> &js
   ) override {
     auto prepared = static_cast<const JSIPreparedJavaScript *>(js.get());
@@ -190,12 +190,12 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   void
-  queueMicrotask (const jsi::Function &callback) override {
+  queueMicrotask(const jsi::Function &callback) override {
     microtask_queue.emplace_back(callback.getFunction(*this));
   }
 
   bool
-  drainMicrotasks (int maxMicrotasksHint = -1) override {
+  drainMicrotasks(int maxMicrotasksHint = -1) override {
     while (!microtask_queue.empty()) {
       auto callback = std::move(microtask_queue.front());
 
@@ -208,7 +208,7 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   jsi::Object
-  global () override {
+  global() override {
     int err;
 
     js_value_t *global;
@@ -219,7 +219,7 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   std::string
-  description () override {
+  description() override {
     int err;
 
     const char *identifier;
@@ -230,43 +230,43 @@ struct JSIRuntime : jsi::Runtime {
   }
 
   bool
-  isInspectable () override {
+  isInspectable() override {
     return false;
   }
 
   jsi::Instrumentation &
-  instrumentation () override {
+  instrumentation() override {
     return JSIInstrumentation::instance;
   }
 
 protected:
   PointerValue *
-  cloneSymbol (const PointerValue *pv) override {
+  cloneSymbol(const PointerValue *pv) override {
     return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
-  cloneBigInt (const PointerValue *pv) override {
+  cloneBigInt(const PointerValue *pv) override {
     return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
-  cloneString (const PointerValue *pv) override {
+  cloneString(const PointerValue *pv) override {
     return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
-  cloneObject (const PointerValue *pv) override {
+  cloneObject(const PointerValue *pv) override {
     return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   PointerValue *
-  clonePropNameID (const PointerValue *pv) override {
+  clonePropNameID(const PointerValue *pv) override {
     return new JSIPointerValue(env, as<JSIPointerValue>(pv)->ref);
   }
 
   jsi::PropNameID
-  createPropNameIDFromAscii (const char *str, size_t len) override {
+  createPropNameIDFromAscii(const char *str, size_t len) override {
     int err;
 
     js_value_t *value;
@@ -277,7 +277,7 @@ protected:
   }
 
   jsi::PropNameID
-  createPropNameIDFromUtf8 (const uint8_t *str, size_t len) override {
+  createPropNameIDFromUtf8(const uint8_t *str, size_t len) override {
     int err;
 
     js_value_t *value;
@@ -288,27 +288,27 @@ protected:
   }
 
   jsi::PropNameID
-  createPropNameIDFromString (const jsi::String &str) override {
+  createPropNameIDFromString(const jsi::String &str) override {
     return Runtime::make<jsi::PropNameID>(cloneString(getPointerValue(str)));
   }
 
   jsi::PropNameID
-  createPropNameIDFromSymbol (const jsi::Symbol &sym) override {
+  createPropNameIDFromSymbol(const jsi::Symbol &sym) override {
     return Runtime::make<jsi::PropNameID>(cloneSymbol(getPointerValue(sym)));
   }
 
   std::string
-  utf8 (const jsi::PropNameID &prop) override {
+  utf8(const jsi::PropNameID &prop) override {
     return as<JSIPointerValue>(prop)->toString(*this);
   }
 
   bool
-  compare (const jsi::PropNameID &a, const jsi::PropNameID &b) override {
+  compare(const jsi::PropNameID &a, const jsi::PropNameID &b) override {
     return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   std::string
-  symbolToString (const jsi::Symbol &sym) override {
+  symbolToString(const jsi::Symbol &sym) override {
     return global()
       .getPropertyAsFunction(*this, "String")
       .call(*this, jsi::Value(*this, sym))
@@ -317,7 +317,7 @@ protected:
   }
 
   jsi::BigInt
-  createBigIntFromInt64 (int64_t n) override {
+  createBigIntFromInt64(int64_t n) override {
     int err;
 
     js_value_t *value;
@@ -328,7 +328,7 @@ protected:
   }
 
   jsi::BigInt
-  createBigIntFromUint64 (uint64_t n) override {
+  createBigIntFromUint64(uint64_t n) override {
     int err;
 
     js_value_t *value;
@@ -339,7 +339,7 @@ protected:
   }
 
   bool
-  bigintIsInt64 (const jsi::BigInt &bigint) override {
+  bigintIsInt64(const jsi::BigInt &bigint) override {
     int err;
 
     bool lossless;
@@ -350,7 +350,7 @@ protected:
   }
 
   bool
-  bigintIsUint64 (const jsi::BigInt &bigint) override {
+  bigintIsUint64(const jsi::BigInt &bigint) override {
     int err;
 
     bool lossless;
@@ -361,7 +361,7 @@ protected:
   }
 
   uint64_t
-  truncate (const jsi::BigInt &bigint) override {
+  truncate(const jsi::BigInt &bigint) override {
     int err;
 
     uint64_t value;
@@ -372,7 +372,7 @@ protected:
   }
 
   jsi::String
-  bigintToString (const jsi::BigInt &bigint, int radix) override {
+  bigintToString(const jsi::BigInt &bigint, int radix) override {
     return global()
       .getPropertyAsFunction(*this, "String")
       .call(*this, jsi::Value(*this, bigint))
@@ -380,7 +380,7 @@ protected:
   }
 
   jsi::String
-  createStringFromAscii (const char *str, size_t len) override {
+  createStringFromAscii(const char *str, size_t len) override {
     int err;
 
     js_value_t *value;
@@ -391,7 +391,7 @@ protected:
   }
 
   jsi::String
-  createStringFromUtf8 (const uint8_t *str, size_t len) override {
+  createStringFromUtf8(const uint8_t *str, size_t len) override {
     int err;
 
     js_value_t *value;
@@ -402,12 +402,12 @@ protected:
   }
 
   std::string
-  utf8 (const jsi::String &string) override {
+  utf8(const jsi::String &string) override {
     return as<JSIPointerValue>(string)->toString(*this);
   }
 
   jsi::Value
-  createValueFromJsonUtf8 (const uint8_t *json, size_t length) override {
+  createValueFromJsonUtf8(const uint8_t *json, size_t length) override {
     return global()
       .getPropertyAsObject(*this, "JSON")
       .getPropertyAsFunction(*this, "parse")
@@ -415,7 +415,7 @@ protected:
   }
 
   jsi::Object
-  createObject () override {
+  createObject() override {
     int err;
 
     js_value_t *result;
@@ -426,7 +426,7 @@ protected:
   }
 
   jsi::Object
-  createObject (std::shared_ptr<jsi::HostObject> object) override {
+  createObject(std::shared_ptr<jsi::HostObject> object) override {
     int err;
 
     auto ref = new JSIHostObjectReference(*this, std::move(object));
@@ -451,7 +451,7 @@ protected:
   }
 
   std::shared_ptr<jsi::HostObject>
-  getHostObject (const jsi::Object &object) override {
+  getHostObject(const jsi::Object &object) override {
     int err;
 
     JSIHostObjectReference *ref;
@@ -462,7 +462,7 @@ protected:
   }
 
   jsi::HostFunctionType &
-  getHostFunction (const jsi::Function &function) override {
+  getHostFunction(const jsi::Function &function) override {
     int err;
 
     JSIHostFunctionReference *ref;
@@ -473,7 +473,7 @@ protected:
   }
 
   bool
-  hasNativeState (const jsi::Object &object) override {
+  hasNativeState(const jsi::Object &object) override {
     int err;
 
     bool result;
@@ -484,7 +484,7 @@ protected:
   }
 
   std::shared_ptr<jsi::NativeState>
-  getNativeState (const jsi::Object &object) override {
+  getNativeState(const jsi::Object &object) override {
     int err;
 
     JSINativeStateReference *ref;
@@ -495,7 +495,7 @@ protected:
   }
 
   void
-  setNativeState (const jsi::Object &object, std::shared_ptr<jsi::NativeState> state) override {
+  setNativeState(const jsi::Object &object, std::shared_ptr<jsi::NativeState> state) override {
     int err;
 
     auto ref = new JSINativeStateReference(std::move(state));
@@ -510,7 +510,7 @@ protected:
   }
 
   jsi::Value
-  getProperty (const jsi::Object &object, const jsi::PropNameID &key) override {
+  getProperty(const jsi::Object &object, const jsi::PropNameID &key) override {
     int err;
 
     js_value_t *value;
@@ -521,7 +521,7 @@ protected:
   }
 
   jsi::Value
-  getProperty (const jsi::Object &object, const jsi::String &key) override {
+  getProperty(const jsi::Object &object, const jsi::String &key) override {
     int err;
 
     js_value_t *value;
@@ -532,7 +532,7 @@ protected:
   }
 
   bool
-  hasProperty (const jsi::Object &object, const jsi::PropNameID &key) override {
+  hasProperty(const jsi::Object &object, const jsi::PropNameID &key) override {
     int err;
 
     bool result;
@@ -543,7 +543,7 @@ protected:
   }
 
   bool
-  hasProperty (const jsi::Object &object, const jsi::String &key) override {
+  hasProperty(const jsi::Object &object, const jsi::String &key) override {
     int err;
 
     bool result;
@@ -554,7 +554,7 @@ protected:
   }
 
   void
-  setPropertyValue (const jsi::Object &object, const jsi::PropNameID &key, const jsi::Value &value) override {
+  setPropertyValue(const jsi::Object &object, const jsi::PropNameID &key, const jsi::Value &value) override {
     int err;
 
     bool result;
@@ -563,7 +563,7 @@ protected:
   }
 
   void
-  setPropertyValue (const jsi::Object &object, const jsi::String &key, const jsi::Value &value) override {
+  setPropertyValue(const jsi::Object &object, const jsi::String &key, const jsi::Value &value) override {
     int err;
 
     bool result;
@@ -572,7 +572,7 @@ protected:
   }
 
   bool
-  isArray (const jsi::Object &object) const override {
+  isArray(const jsi::Object &object) const override {
     int err;
 
     bool result;
@@ -583,7 +583,7 @@ protected:
   }
 
   bool
-  isArrayBuffer (const jsi::Object &object) const override {
+  isArrayBuffer(const jsi::Object &object) const override {
     int err;
 
     bool result;
@@ -594,7 +594,7 @@ protected:
   }
 
   bool
-  isFunction (const jsi::Object &object) const override {
+  isFunction(const jsi::Object &object) const override {
     int err;
 
     bool result;
@@ -605,7 +605,7 @@ protected:
   }
 
   bool
-  isHostObject (const jsi::Object &object) const override {
+  isHostObject(const jsi::Object &object) const override {
     int err;
 
     bool result;
@@ -616,7 +616,7 @@ protected:
   }
 
   bool
-  isHostFunction (const jsi::Function &function) const override {
+  isHostFunction(const jsi::Function &function) const override {
     int err;
 
     bool result;
@@ -627,7 +627,7 @@ protected:
   }
 
   jsi::Array
-  getPropertyNames (const jsi::Object &object) override {
+  getPropertyNames(const jsi::Object &object) override {
     int err;
 
     js_value_t *value;
@@ -638,17 +638,17 @@ protected:
   }
 
   jsi::WeakObject
-  createWeakObject (const jsi::Object &object) override {
+  createWeakObject(const jsi::Object &object) override {
     return make<jsi::WeakObject>(as(object));
   }
 
   jsi::Value
-  lockWeakObject (const jsi::WeakObject &object) override {
+  lockWeakObject(const jsi::WeakObject &object) override {
     return make<jsi::Object>(as(object));
   }
 
   jsi::Array
-  createArray (size_t len) override {
+  createArray(size_t len) override {
     int err;
 
     js_value_t *value;
@@ -659,7 +659,7 @@ protected:
   }
 
   jsi::ArrayBuffer
-  createArrayBuffer (std::shared_ptr<jsi::MutableBuffer> buffer) override {
+  createArrayBuffer(std::shared_ptr<jsi::MutableBuffer> buffer) override {
     int err;
 
     auto ref = new JSIArrayBufferReference(std::move(buffer));
@@ -672,7 +672,7 @@ protected:
   }
 
   size_t
-  size (const jsi::Array &array) override {
+  size(const jsi::Array &array) override {
     int err;
 
     uint32_t len;
@@ -683,7 +683,7 @@ protected:
   }
 
   size_t
-  size (const jsi::ArrayBuffer &arraybuffer) override {
+  size(const jsi::ArrayBuffer &arraybuffer) override {
     int err;
 
     size_t len;
@@ -694,7 +694,7 @@ protected:
   }
 
   uint8_t *
-  data (const jsi::ArrayBuffer &arraybuffer) override {
+  data(const jsi::ArrayBuffer &arraybuffer) override {
     int err;
 
     uint8_t *data;
@@ -705,7 +705,7 @@ protected:
   }
 
   jsi::Value
-  getValueAtIndex (const jsi::Array &array, size_t i) override {
+  getValueAtIndex(const jsi::Array &array, size_t i) override {
     int err;
 
     js_value_t *value;
@@ -716,7 +716,7 @@ protected:
   }
 
   void
-  setValueAtIndexImpl (const jsi::Array &array, size_t i, const jsi::Value &value) override {
+  setValueAtIndexImpl(const jsi::Array &array, size_t i, const jsi::Value &value) override {
     int err;
 
     err = js_set_element(env, as(array), i, as(value));
@@ -724,7 +724,7 @@ protected:
   }
 
   jsi::Function
-  createFunctionFromHostFunction (const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType function) override {
+  createFunctionFromHostFunction(const jsi::PropNameID &name, unsigned int argc, jsi::HostFunctionType function) override {
     int err;
 
     auto ref = new JSIHostFunctionReference(*this, function);
@@ -745,7 +745,7 @@ protected:
   }
 
   jsi::Value
-  call (const jsi::Function &function, const jsi::Value &receiver, const jsi::Value *args, size_t count) override {
+  call(const jsi::Function &function, const jsi::Value &receiver, const jsi::Value *args, size_t count) override {
     int err;
 
     std::vector<js_value_t *> argv;
@@ -764,7 +764,7 @@ protected:
   }
 
   jsi::Value
-  callAsConstructor (const jsi::Function &constructor, const jsi::Value *args, size_t count) override {
+  callAsConstructor(const jsi::Function &constructor, const jsi::Value *args, size_t count) override {
     int err;
 
     std::vector<js_value_t *> argv;
@@ -783,7 +783,7 @@ protected:
   }
 
   ScopeState *
-  pushScope () override {
+  pushScope() override {
     int err;
 
     js_handle_scope_t *scope;
@@ -794,7 +794,7 @@ protected:
   }
 
   void
-  popScope (ScopeState *state) override {
+  popScope(ScopeState *state) override {
     int err;
 
     auto scope = reinterpret_cast<js_handle_scope_t *>(state);
@@ -805,27 +805,27 @@ protected:
   }
 
   bool
-  strictEquals (const jsi::Symbol &a, const jsi::Symbol &b) const override {
+  strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override {
     return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
-  strictEquals (const jsi::BigInt &a, const jsi::BigInt &b) const override {
+  strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override {
     return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
-  strictEquals (const jsi::String &a, const jsi::String &b) const override {
+  strictEquals(const jsi::String &a, const jsi::String &b) const override {
     return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   bool
-  strictEquals (const jsi::Object &a, const jsi::Object &b) const override {
+  strictEquals(const jsi::Object &a, const jsi::Object &b) const override {
     return strictEquals(static_cast<const jsi::Pointer &>(a), b);
   }
 
   inline bool
-  strictEquals (const jsi::Pointer &a, const jsi::Pointer &b) const {
+  strictEquals(const jsi::Pointer &a, const jsi::Pointer &b) const {
     int err;
 
     bool result;
@@ -836,7 +836,7 @@ protected:
   }
 
   bool
-  instanceOf (const jsi::Object &object, const jsi::Function &constructor) override {
+  instanceOf(const jsi::Object &object, const jsi::Function &constructor) override {
     int err;
 
     bool result;
@@ -847,53 +847,53 @@ protected:
   }
 
   void
-  setExternalMemoryPressure (const jsi::Object &obj, size_t amount) override {}
+  setExternalMemoryPressure(const jsi::Object &obj, size_t amount) override {}
 
 private:
   std::deque<jsi::Function> microtask_queue;
 
   template <typename T>
   static void
-  finalize (js_env_t *, void *data, void *finalize_hint) {
+  finalize(js_env_t *, void *data, void *finalize_hint) {
     delete static_cast<T *>(finalize_hint);
   }
 
   template <typename T>
   inline T
-  make (js_value_t *value) const {
+  make(js_value_t *value) const {
     return Runtime::make<T>(new JSIPointerValue(env, value));
   }
 
   template <>
   inline jsi::WeakObject
-  make (js_value_t *value) const {
+  make(js_value_t *value) const {
     return Runtime::make<jsi::WeakObject>(new JSIWeakPointerValue(env, value));
   }
 
   template <typename T>
   inline const T *
-  as (const jsi::Pointer &p) const {
+  as(const jsi::Pointer &p) const {
     return as<T>(getPointerValue(p));
   }
 
   template <typename T>
   inline const T *
-  as (const PointerValue *pv) const {
+  as(const PointerValue *pv) const {
     return static_cast<const T *>(pv);
   }
 
   inline js_value_t *
-  as (const jsi::Pointer &p) const {
+  as(const jsi::Pointer &p) const {
     return as(getPointerValue(p));
   }
 
   inline js_value_t *
-  as (const PointerValue *pv) const {
+  as(const PointerValue *pv) const {
     return as<JSIPointerValue>(pv)->value();
   }
 
   inline js_value_t *
-  as (const jsi::Value &v) const {
+  as(const jsi::Value &v) const {
     int err;
 
     js_value_t *value;
@@ -940,12 +940,12 @@ private:
   }
 
   inline js_value_t *
-  as (const jsi::JSError &err) {
+  as(const jsi::JSError &err) {
     return as(err.value());
   }
 
   jsi::Value
-  as (js_value_t *v) const {
+  as(js_value_t *v) const {
     int err;
 
     js_value_type_t type;
@@ -995,7 +995,7 @@ private:
   }
 
   inline jsi::JSError
-  lastException () {
+  lastException() {
     int err;
 
     js_value_t *error;
@@ -1059,7 +1059,7 @@ private:
     operator=(const JSIPointerValue &) = delete;
 
     inline js_value_t *
-    value () const {
+    value() const {
       int err;
 
       js_value_t *value;
@@ -1070,7 +1070,7 @@ private:
     }
 
     inline std::string
-    toString (JSIRuntime &runtime) const {
+    toString(JSIRuntime &runtime) const {
       int err;
 
       auto value = this->value();
@@ -1092,7 +1092,7 @@ private:
 
   protected:
     void
-    invalidate () override {
+    invalidate() noexcept override {
       delete this;
     }
   };
@@ -1122,7 +1122,7 @@ private:
     operator=(const JSIWeakPointerValue &) = delete;
 
     inline js_value_t *
-    value () const {
+    value() const {
       int err;
 
       js_value_t *value;
@@ -1134,7 +1134,7 @@ private:
 
   protected:
     void
-    invalidate () override {
+    invalidate() noexcept override {
       delete this;
     }
   };
@@ -1181,7 +1181,7 @@ private:
     operator=(const JSIHostObjectReference &) = delete;
 
     static js_value_t *
-    get (js_env_t *env, js_value_t *property, void *data) {
+    get(js_env_t *env, js_value_t *property, void *data) {
       int err;
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
@@ -1206,7 +1206,7 @@ private:
     }
 
     static bool
-    set (js_env_t *env, js_value_t *property, js_value_t *value, void *data) {
+    set(js_env_t *env, js_value_t *property, js_value_t *value, void *data) {
       int err;
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
@@ -1229,7 +1229,7 @@ private:
     }
 
     static js_value_t *
-    ownKeys (js_env_t *env, void *data) {
+    ownKeys(js_env_t *env, void *data) {
       int err;
 
       auto ref = static_cast<JSIHostObjectReference *>(data);
@@ -1279,7 +1279,7 @@ private:
     operator=(const JSIHostFunctionReference &) = delete;
 
     static js_value_t *
-    call (js_env_t *env, js_callback_info_t *info) {
+    call(js_env_t *env, js_callback_info_t *info) {
       int err;
 
       JSIHostFunctionReference *ref;

@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "name": "libjsi",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holepunchto/libjsi.git"
+  },
+  "author": "Holepunch",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/holepunchto/libjsi/issues"
+  },
+  "homepage": "https://github.com/holepunchto/libjsi#readme",
+  "devDependencies": {
+    "cmake-fetch": "^1.0.0"
+  }
+}

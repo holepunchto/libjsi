@@ -21,7 +21,7 @@ foreach(test IN LISTS tests)
   target_link_libraries(
     ${test}
     PRIVATE
-      jsi_shared
+      jsi_static
   )
 
   target_include_directories(

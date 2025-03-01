@@ -25,6 +25,12 @@ namespace jsi {
 /// it modify the values of any jsi values in the heap (although GCs are fine).
 class JSI_EXPORT Instrumentation {
 public:
+  /// Additional options controlling what to include when capturing a heap
+  /// snapshot.
+  struct HeapSnapshotOptions {
+    bool captureNumericValue{false};
+  };
+
   virtual ~Instrumentation() = default;
 
   /// Returns GC statistics as a JSON-encoded string, with an object containing
@@ -41,7 +47,7 @@ public:
   ///
   /// \return the GC statistics collected so far, as a JSON-encoded string.
   virtual std::string
-  getRecordedGCStats () = 0;
+  getRecordedGCStats() = 0;
 
   /// Request statistics about the current state of the runtime's heap. This
   /// function can be called at any time, and should produce information that is
@@ -50,7 +56,7 @@ public:
   /// \return a map from a string key to a number associated with that
   /// statistic.
   virtual std::unordered_map<std::string, int64_t>
-  getHeapInfo (
+  getHeapInfo(
     bool includeExpensive
   ) = 0;
 
@@ -58,7 +64,7 @@ public:
   /// \param cause The cause of this collection, as it should be reported in
   ///   logs.
   virtual void
-  collectGarbage (std::string cause) = 0;
+  collectGarbage(std::string cause) = 0;
 
   /// A HeapStatsUpdate is a tuple of the fragment index, the number of objects
   /// in that fragment, and the number of bytes used by those objects.
@@ -72,7 +78,7 @@ public:
   ///   been updated. This callback will be invoked on the same thread that the
   ///   runtime is using.
   virtual void
-  startTrackingHeapObjectStackTraces (
+  startTrackingHeapObjectStackTraces(
     std::function<void(
       uint64_t lastSeenObjectID,
       std::chrono::microseconds timestamp,
@@ -82,7 +88,7 @@ public:
 
   /// Stop capture JS stack-traces for JS heap allocated objects.
   virtual void
-  stopTrackingHeapObjectStackTraces () = 0;
+  stopTrackingHeapObjectStackTraces() = 0;
 
   /// Start a heap sampling profiler that will sample heap allocations, and the
   /// stack trace they were allocated at. Reports a summary of which functions
@@ -91,42 +97,50 @@ public:
   ///   samples. This will be used as the expected value of a poisson
   ///   distribution.
   virtual void
-  startHeapSampling (size_t samplingInterval) = 0;
+  startHeapSampling(size_t samplingInterval) = 0;
 
   /// Turns off the heap sampling profiler previously enabled via
   /// \c startHeapSampling. Writes the output of the sampling heap profiler to
   /// \p os. The output is a JSON formatted string.
   virtual void
-  stopHeapSampling (std::ostream &os) = 0;
+  stopHeapSampling(std::ostream &os) = 0;
 
   /// Captures the heap to a file
   ///
-  /// \param path to save the heap capture
+  /// \param path to save the heap capture.
+  /// \param options additional options for what to capture.
   virtual void
-  createSnapshotToFile (const std::string &path) = 0;
+  createSnapshotToFile(
+    const std::string &path,
+    const HeapSnapshotOptions &options = {false}
+  ) = 0;
 
   /// Captures the heap to an output stream
   ///
   /// \param os output stream to write to.
+  /// \param options additional options for what to capture.
   virtual void
-  createSnapshotToStream (std::ostream &os) = 0;
+  createSnapshotToStream(
+    std::ostream &os,
+    const HeapSnapshotOptions &options = {false}
+  ) = 0;
 
   /// If the runtime has been created to trace to a temp file, flush
   /// any unwritten parts of the trace of bridge traffic to the file,
   /// and return the name of  the file.  Otherwise, return the empty string.
   /// Tracing is disabled after this call.
   virtual std::string
-  flushAndDisableBridgeTrafficTrace () = 0;
+  flushAndDisableBridgeTrafficTrace() = 0;
 
   /// Write basic block profile trace to the given file name.
   virtual void
-  writeBasicBlockProfileTraceToFile (
+  writeBasicBlockProfileTraceToFile(
     const std::string &fileName
   ) const = 0;
 
   /// Dump external profiler symbols to the given file name.
   virtual void
-  dumpProfilerSymbolsToFile (const std::string &fileName) const = 0;
+  dumpProfilerSymbolsToFile(const std::string &fileName) const = 0;
 };
 
 } // namespace jsi

@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 
+find_package(cmake-fetch REQUIRED PATHS node_modules/cmake-fetch)
+
 project(jsi C CXX)
 
-if(NOT TARGET js)
-  add_subdirectory(vendor/libjs EXCLUDE_FROM_ALL)
-endif()
+fetch_package("github:holepunchto/libjs")
 
 add_library(jsi OBJECT)
 
@@ -81,5 +81,6 @@ install(FILES include/js.h DESTINATION include)
 
 if(PROJECT_IS_TOP_LEVEL)
   enable_testing()
+
   add_subdirectory(test)
 endif()
